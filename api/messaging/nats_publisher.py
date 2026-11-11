@@ -63,7 +63,7 @@ def _core_error(code: str, message: str, payload: dict[str, Any]) -> BaseAppExce
         case "timeout":
             return CoreTimeoutException()
         case _:
-            return CoreResponseException(f"erro interno do core ({code})")
+            return CoreResponseException(f"internal core error ({code})")
 
 
 class NATSPublisher:
@@ -96,7 +96,7 @@ class NATSPublisher:
         try:
             wrapper = ApiWrapper[Any].model_validate(envelope)
         except ValidationError as exc:
-            raise CoreResponseException("envelope inválido") from exc
+            raise CoreResponseException("invalid envelope") from exc
         if not wrapper.ok:
             error = envelope.get("error")
             error = error if isinstance(error, dict) else {}

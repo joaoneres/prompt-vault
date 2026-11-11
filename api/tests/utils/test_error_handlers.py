@@ -55,7 +55,7 @@ def test_validation_error_response(client):
     assert response.status_code == 422
     error = response.json()["error"]
     assert error["code"] == "INVALID_REQUEST"
-    assert error["details"]["fields"][0]["campo"] == "body.n"
+    assert error["details"]["fields"][0]["field"] == "body.n"
 
 
 def test_unhandled_exception_is_generic_and_logged(client, caplog):

@@ -2,6 +2,7 @@
 
 Dashboard to manage prompts and their versions: search, create, edit, delete/recover, version timeline and version comparison. React + Vite + TypeScript + Tailwind CSS + Axios.
 All data comes from the API gateway (`../api`); nothing is stored by the front except the theme preference.
+The interface texts (labels, toasts, dates) are in Brazilian Portuguese on purpose, since they are what the end user reads; code, comments and documentation are in English.
 
 ## Run
 
@@ -52,13 +53,13 @@ The timeline calls `GET /prompts/{id}/versions` and lists the versions newest fi
 history: version, date, a two-line summary, the active version highlighted. Clicking a version expands its
 full content (with copy), and each one has quick links to compare it with the previous or the active version.
 
-Version handling: editing offers "Salvar e ativar" (`PUT /prompts/{id}/content`, new version in use) and
-"Salvar sem ativar" (`POST /prompts/{id}/versions`, kept in the history only). In the timeline, any version
-that is not the active one has "Ativar esta versão" (`POST /prompts/{id}/activate`, with confirmation), which
-also works as a rollback.
+Version handling: editing offers "Salvar e ativar" (save and activate: `PUT /prompts/{id}/content`, new version in use) and
+"Salvar sem ativar" (save without activating: `POST /prompts/{id}/versions`, kept in the history only). In the
+timeline, any version that is not the active one has "Ativar esta versão" (activate this version:
+`POST /prompts/{id}/activate`, with confirmation), which also works as a rollback.
 
 Deleting a prompt (from its details modal, with confirmation) is a soft delete: versions are kept and the
-prompt goes to the trash (`DELETE /prompts/{id}`, `GET /prompts/deleted`). "Recuperar" brings it back
+prompt goes to the trash (`DELETE /prompts/{id}`, `GET /prompts/deleted`). "Recuperar" (recover) brings it back
 (`POST /prompts/{id}/recover`). The trash shows `updated_at`, which the core sets when deleting.
 
 All 11 endpoints of the API are now used by the front.

@@ -140,10 +140,10 @@ async def test_domain_error_mapping(nc, message, expected):
     ],
 )
 async def test_dedicated_core_codes_map_without_reading_the_message(nc, code, expected):
-    nc.request.return_value = reply(err(code, "texto qualquer que não importa"))
+    nc.request.return_value = reply(err(code, "any text, it does not matter"))
     with pytest.raises(expected) as info:
         await NATSPublisher(nc).request("s", {})
-    assert info.value.details == {"reason": "texto qualquer que não importa"}
+    assert info.value.details == {"reason": "any text, it does not matter"}
 
 
 @pytest.mark.parametrize(

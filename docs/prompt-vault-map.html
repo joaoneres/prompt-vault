@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Prompt Vault map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: a tool, not a poster. A sticky tab bar switches between six views; each view is a
+   diagram stage on the left and an inspector on the right that explains whatever is selected.
+   Layer colors are the same five used in the PDF guide, so both materials read as one system. */
+:root {
+  --bg: #F2F5F9; --surface: #FFFFFF; --surface-2: #E9EFF6; --line: #D3DCE8;
+  --fg: #17243A; --muted: #566883; --accent: #2F5D9F; --accent-fg: #FFFFFF;
+  --ok: #1E8E5A; --bad: #C9402B; --code-bg: #F4F7FB;
+  --domain: #D9482B; --app: #E0961F; --port: #188A68; --adapter: #3B5E92; --infra: #6B7A90;
+  --t-domain: #FBE3DC; --t-app: #FBEBCB; --t-port: #D3EEE4; --t-adapter: #DCE6F3; --t-infra: #E6EAF0;
+  --on-domain: #FFFFFF; --on-app: #2A1B00; --on-port: #FFFFFF; --on-adapter: #FFFFFF; --on-infra: #FFFFFF;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1422; --surface: #142035; --surface-2: #1B2A44; --line: #27395A;
+    --fg: #E7EDF7; --muted: #9AA9C2; --accent: #7FA8E6; --accent-fg: #0C1422;
+    --ok: #4CC38A; --bad: #FF7A63; --code-bg: #0F192B;
+    --domain: #FF7A5C; --app: #F5B54B; --port: #3CC9A0; --adapter: #7FA3D9; --infra: #9AA8BD;
+    --t-domain: #3A1F1A; --t-app: #3A2C12; --t-port: #12342B; --t-adapter: #1B2A44; --t-infra: #222C3B;
+    --on-domain: #1A0A05; --on-app: #1F1400; --on-port: #05241C; --on-adapter: #0A1424; --on-infra: #0F1724;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1422; --surface: #142035; --surface-2: #1B2A44; --line: #27395A;
+  --fg: #E7EDF7; --muted: #9AA9C2; --accent: #7FA8E6; --accent-fg: #0C1422;
+  --ok: #4CC38A; --bad: #FF7A63; --code-bg: #0F192B;
+  --domain: #FF7A5C; --app: #F5B54B; --port: #3CC9A0; --adapter: #7FA3D9; --infra: #9AA8BD;
+  --t-domain: #3A1F1A; --t-app: #3A2C12; --t-port: #12342B; --t-adapter: #1B2A44; --t-infra: #222C3B;
+  --on-domain: #1A0A05; --on-app: #1F1400; --on-port: #05241C; --on-adapter: #0A1424; --on-infra: #0F1724;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font);
+  -webkit-text-size-adjust: 100%;
+}
+button, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+h1, h2, h3, p { margin: 0; text-wrap: balance; }
+p { text-wrap: pretty; }
+
+.wrap {
+  max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.top .wrap { padding-block: 12px 0; }
+.brand { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; }
+.brand svg { flex: none; }
+.brand h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
+.brand p { color: var(--muted); font-size: 0.85rem; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 9px 14px 8px;
+  cursor: pointer; color: var(--muted); font-weight: 500; font-size: 0.92rem; white-space: nowrap;
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+
+main.wrap { padding-block: 22px 56px; }
+.lede { color: var(--muted); max-width: 70ch; margin-bottom: 16px; }
+.lede b { color: var(--fg); font-weight: 600; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.stage { padding: 14px; }
+.inspector { padding: 16px; position: sticky; top: 112px; }
+@media (max-width: 920px) { .inspector { position: static; } }
+.scroll { overflow-x: auto; }
+svg.diagram { display: block; width: 100%; height: auto; min-width: 640px; }
+.cap { font: 600 10.5px var(--font); letter-spacing: 0.08em; fill: var(--muted); }
+.svt { font: 500 12.5px var(--font); fill: var(--fg); }
+.svt-b { font: 600 13px var(--font); fill: var(--fg); }
+.svt-s { font: 400 11px var(--font); fill: var(--muted); }
+.svt-m { font: 400 11.5px var(--mono); fill: var(--fg); }
+
+/* layer palette used by SVG shapes and chips */
+.l-domain { fill: var(--t-domain); stroke: var(--domain); } .l-app { fill: var(--t-app); stroke: var(--app); }
+.l-port { fill: var(--t-port); stroke: var(--port); } .l-adapter { fill: var(--t-adapter); stroke: var(--adapter); }
+.l-infra { fill: var(--t-infra); stroke: var(--infra); } .l-ext { fill: var(--surface-2); stroke: var(--line); }
+.badge { display: inline-block; padding: 1px 9px; border-radius: 99px; font: 600 11px var(--font); letter-spacing: 0.02em; }
+.b-domain { background: var(--domain); color: var(--on-domain); } .b-app { background: var(--app); color: var(--on-app); }
+.b-port { background: var(--port); color: var(--on-port); } .b-adapter { background: var(--adapter); color: var(--on-adapter); }
+.b-infra { background: var(--infra); color: var(--on-infra); } .b-ext { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface-2); border-radius: 99px; padding: 2px 10px; font-size: 0.82rem; }
+.chip.dim { opacity: 0.35; }
+
+.ring { cursor: pointer; }
+.ring rect { stroke-width: 1.5; transition: stroke-width .15s, filter .15s; }
+.ring:hover > rect:first-child, .ring.sel > rect:first-child { stroke-width: 3.2; }
+.ring.sel > rect:first-child { filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor 45%, transparent)); }
+.node { cursor: pointer; } .node rect { stroke-width: 1.6; transition: stroke-width .15s, opacity .2s; }
+.node:hover rect, .node.sel rect { stroke-width: 3.2; }
+.node.faded { opacity: 0.35; }
+.edge { stroke: var(--muted); stroke-width: 1.5; fill: none; transition: stroke .2s, stroke-width .2s, opacity .2s; }
+.edge.out { stroke: var(--accent); stroke-width: 2.6; } .edge.in { stroke: var(--app); stroke-width: 2.6; }
+.edge.faded { opacity: 0.2; }
+.edge.ok { stroke: var(--ok); stroke-width: 3; } .edge.no { stroke: var(--bad); stroke-width: 3; stroke-dasharray: 6 5; }
+
+.insp-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.insp-h h2 { font-size: 1.05rem; font-weight: 600; }
+.insp p { margin-bottom: 10px; font-size: 0.93rem; }
+.insp h3 { font: 600 11px var(--font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
+.insp ul { margin: 0 0 6px; padding-left: 18px; font-size: 0.9rem; } .insp li { margin-bottom: 3px; }
+.insp .quote { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; color: var(--muted); font-size: 0.9rem; margin-bottom: 10px; }
+.bars { display: grid; gap: 5px; }
+.bar { display: grid; grid-template-columns: 62px 1fr 34px; gap: 8px; align-items: center; font-size: 0.8rem; }
+.bar i { display: block; height: 9px; border-radius: 5px; background: var(--line); position: relative; overflow: hidden; }
+.bar i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--c); border-radius: 5px; }
+.bar span:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.bar.cur { font-weight: 600; }
+pre.code {
+  margin: 0 0 10px; padding: 10px 12px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+  font: 400 12px/1.5 var(--mono); overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4;
+}
+.btn {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  font-weight: 500; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--accent); } .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.pri { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn small { font: 400 11px var(--mono); opacity: 0.75; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* dependency tester */
+.tester { margin-top: 12px; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; display: grid; gap: 10px; }
+.tester label { font-size: 0.85rem; color: var(--muted); }
+select { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; }
+.verdict { padding: 9px 12px; border-radius: 8px; font-size: 0.9rem; border: 1px solid var(--line); background: var(--surface-2); }
+.verdict.ok { border-color: var(--ok); } .verdict.no { border-color: var(--bad); }
+.verdict b.ok { color: var(--ok); } .verdict b.no { color: var(--bad); }
+
+/* sequence */
+.lifeline { stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 3 4; }
+.arrow-g { cursor: pointer; } .arrow-g .ln { stroke: var(--muted); stroke-width: 1.4; transition: stroke .2s, stroke-width .2s, opacity .2s; }
+.arrow-g.done .ln { opacity: 0.45; } .arrow-g.cur .ln { stroke: var(--accent); stroke-width: 3; opacity: 1; }
+.arrow-g.future .ln { opacity: 0.35; } .arrow-g .lbl { font: 400 11px var(--font); fill: var(--fg); }
+.arrow-g.cur .lbl { font-weight: 600; } .arrow-g .num { fill: var(--muted); } .arrow-g.cur .num { fill: var(--accent); }
+.arrow-g .numt { font: 600 8.5px var(--font); fill: var(--surface); text-anchor: middle; }
+#dot { transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+.stepbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.stepbar .count { margin-left: auto; color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.lay-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
+.lay-row .badge { opacity: 0.28; transition: opacity .2s; } .lay-row .badge.on { opacity: 1; }
+.note { padding: 8px 10px; border-radius: 8px; background: var(--surface-2); font-size: 0.86rem; margin-bottom: 10px; }
+.note.hot { background: var(--t-domain); border: 1px solid var(--domain); }
+.logline { font: 400 11.5px/1.5 var(--mono); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 6px; }
+
+/* simulator */
+.sim-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.sim-grid > * { min-width: 0; }
+.versions { display: flex; flex-wrap: wrap; gap: 10px; }
+.vcard {
+  width: 150px; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+  cursor: pointer; position: relative; min-height: 84px;
+}
+.vcard:hover { border-color: var(--port); }
+.vcard.act { background: var(--t-port); border: 2px solid var(--port); padding: 8px 10px; }
+.vcard .vn { font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.vcard pre { margin: 0; font: 400 11.5px/1.4 var(--mono); color: var(--muted); white-space: pre-wrap; word-break: break-word; max-height: 4.4em; overflow: hidden; }
+.vcard.new { animation: pop .35s ease-out; }
+@keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+textarea#sim-content { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: 400 13px/1.45 var(--mono); resize: vertical; }
+.result { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); font-size: 0.88rem; min-height: 44px; }
+.result.ok { border-color: var(--ok); } .result.err { border-color: var(--bad); background: var(--t-domain); }
+.result .mono { display: block; margin-top: 4px; color: var(--muted); font-size: 0.78rem; overflow-x: auto; white-space: pre; }
+.st-box { transition: opacity .25s, stroke-width .2s; } .st-box.cur { stroke-width: 3.4; } .st-box:not(.cur) { opacity: 0.55; }
+.tr { transition: opacity .25s, stroke .25s; stroke: var(--muted); stroke-width: 1.4; fill: none; opacity: 0.22; }
+.tr.can { opacity: 1; stroke: var(--accent); stroke-width: 2.4; }
+.trl { font: 500 10.5px var(--mono); fill: var(--muted); opacity: 0.5; } .trl.can { fill: var(--fg); opacity: 1; font-weight: 600; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 0.88rem; margin: 0 0 6px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); font-size: 0.85rem; }
+.evlog { list-style: none; margin: 0; padding: 0; max-height: 230px; overflow-y: auto; display: grid; gap: 4px; }
+.evlog li { font: 400 12px var(--mono); padding: 4px 8px; border-radius: 6px; background: var(--surface-2); }
+.evlog li:first-child { outline: 1.5px solid var(--accent); }
+.evlog li span { color: var(--muted); }
+table.diff { border-collapse: collapse; width: 100%; font: 400 12px var(--mono); }
+table.diff td, table.diff th { padding: 3px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+table.diff th { font: 600 10.5px var(--font); color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+.dt { font-weight: 600; } .dt.added { color: var(--ok); } .dt.removed { color: var(--bad); } .dt.modified { color: var(--app); } .dt.unchanged { color: var(--muted); font-weight: 400; }
+
+/* subjects */
+.filters { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.fbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 3px 12px; cursor: pointer; font-size: 0.85rem; }
+.fbtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.map-head, .map-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1.25fr); gap: 0; align-items: stretch; min-width: 640px; }
+.map-head div { font: 600 10.5px var(--font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 10px 6px; }
+.map-row { background: none; border: 0; padding: 0; width: 100%; text-align: left; cursor: pointer; margin-bottom: 6px; }
+.map-row > div { padding: 8px 10px; border: 1px solid var(--line); background: var(--surface); position: relative; font-size: 0.86rem; min-width: 0; overflow-wrap: anywhere; }
+.map-row > div:first-child { border-radius: 8px 0 0 8px; border-left: 4px solid var(--adapter); }
+.map-row > div:nth-child(2) { border-left: 0; border-right: 0; border-top-color: var(--line); background: var(--t-app); }
+.map-row > div:last-child { border-radius: 0 8px 8px 0; border-left: 0; background: var(--t-domain); }
+.map-row.query > div:last-child { background: var(--t-port); }
+.map-row > div:first-child::after, .map-row > div:nth-child(2)::after {
+  content: "→"; position: absolute; right: -9px; top: 50%; transform: translateY(-50%); z-index: 1; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 50%; width: 18px; height: 18px; display: grid; place-items: center; font-size: 11px; color: var(--muted);
+}
+.map-row:hover > div, .map-row.sel > div { border-color: var(--accent); }
+.map-row.sel > div:first-child { box-shadow: -2px 0 0 0 var(--accent) inset; }
+.map-row .sub { color: var(--muted); font-size: 0.78rem; display: block; }
+.legend-note { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--t-app); border: 1px solid var(--app); font-size: 0.86rem; }
+
+/* wiring */
+.wire-steps { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
+.wstep { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; font-size: 0.82rem; max-width: 190px; text-align: left; }
+.wstep b { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 0.78rem; }
+.wstep[aria-pressed="true"] { border-color: var(--accent); background: var(--surface-2); } .wstep[aria-pressed="true"] b { background: var(--accent); color: var(--accent-fg); }
+.wnode { transition: opacity .3s; } .wnode.hid { opacity: 0.13; } .wnode.new rect { stroke-width: 3.2; }
+.wedge { stroke: var(--muted); stroke-width: 1.4; fill: none; transition: opacity .3s; } .wedge.hid { opacity: 0.1; }
+
+footer { color: var(--muted); font-size: 0.82rem; margin-top: 28px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---- the three-project colors (front, api, core, NATS) ---- */
+:root { --front: #6D4AAE; --api: #0E7C86; --core: #2F5D9F; --nats: #B8651B;
+  --t-front: #E9E1F6; --t-api: #D6EEF0; --t-core: #DCE6F3; --t-nats: #F8E6D3;
+  --on-front: #FFFFFF; --on-api: #FFFFFF; --on-core: #FFFFFF; --on-nats: #FFFFFF; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --front: #A98BE0; --api: #4FC3CC; --core: #7FA6E0; --nats: #E3935A;
+  --t-front: #2B2240; --t-api: #12333A; --t-core: #1B2B45; --t-nats: #3B2A1B;
+  --on-front: #1A1030; --on-api: #05242A; --on-core: #0A1424; --on-nats: #2A1500; } }
+.l-front { fill: var(--t-front); stroke: var(--front); } .l-api { fill: var(--t-api); stroke: var(--api); }
+.l-core { fill: var(--t-core); stroke: var(--core); } .l-nats { fill: var(--t-nats); stroke: var(--nats); }
+.b-front { background: var(--front); color: var(--on-front); } .b-api { background: var(--api); color: var(--on-api); }
+.b-core { background: var(--core); color: var(--on-core); } .b-nats { background: var(--nats); color: var(--on-nats); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="-18 -18 36 36" aria-hidden="true">
+        <polygon points="0,-16 13.9,-8 13.9,8 0,16 -13.9,8 -13.9,-8" fill="none" stroke="var(--infra)" stroke-width="2"/>
+        <polygon points="0,-11 9.5,-5.5 9.5,5.5 0,11 -9.5,5.5 -9.5,-5.5" fill="none" stroke="var(--adapter)" stroke-width="2"/>
+        <polygon points="0,-6.5 5.6,-3.2 5.6,3.2 0,6.5 -5.6,3.2 -5.6,-3.2" fill="var(--domain)" stroke="var(--domain)" stroke-width="1.5"/>
+      </svg>
+      <div>
+        <h1>Prompt Vault map</h1>
+        <p>How the three projects and the structures inside them connect, based on the study guide</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Map views" id="tabs"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============ 1. SYSTEM ============ -->
+<section class="view" id="v-system" role="tabpanel" aria-labelledby="t-system">
+  <p class="lede"><b>Click a box</b> to see what each part of the system is, which technology it uses and what it talks to. The browser speaks HTTP to the api, the api speaks NATS to the core, and the core speaks SQL to a file.</p>
+  <div class="layout">
+    <div class="card stage"><div class="scroll"><svg class="diagram" id="svg-system" viewBox="0 0 780 360" role="img" aria-label="The whole system: front end, api, NATS, core and SQLite"></svg></div></div>
+    <aside class="card inspector insp" id="insp-system" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 2. LAYERS ============ -->
+<section class="view" id="v-layers" role="tabpanel" aria-labelledby="t-layers" hidden>
+  <p class="lede"><b>Click a ring</b> to see what each layer of the core does, what it may import and which files live in it. The domain sits in the center; everything that enters or leaves the core crosses the rings.</p>
+  <div class="layout">
+    <div class="card stage"><div class="scroll"><svg class="diagram" id="svg-layers" viewBox="0 0 760 470" role="img" aria-label="Five layers as concentric rings: domain in the center, then app, port and adapter, with infra below"></svg></div></div>
+    <aside class="card inspector insp" id="insp-layers" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 3. DEPENDENCIES ============ -->
+<section class="view" id="v-dependencies" role="tabpanel" aria-labelledby="t-dependencies" hidden>
+  <p class="lede">The rule fits in one sentence: <b>dependencies always point inward</b>. Hover (or tap) a layer to see who it imports and who imports it. Then try to break the rule in the tester.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="scroll"><svg class="diagram" id="svg-deps" viewBox="0 0 760 390" role="img" aria-label="Import arrows between adapter, infra, app, port and domain. No arrow leaves domain."></svg></div>
+      <div class="tester">
+        <div class="row"><b>Dependency tester</b><span class="svt-s" style="font:400 0.82rem var(--font);color:var(--muted)">Choose who tries to import whom.</span></div>
+        <div class="row">
+          <label for="dep-from">The layer</label><select id="dep-from"></select>
+          <label for="dep-to">tries to import</label><select id="dep-to"></select>
+          <button class="btn pri" id="dep-go" type="button">Test</button>
+        </div>
+        <div class="row" id="dep-quick"></div>
+        <div class="verdict" id="dep-verdict">Pick a pair and click <b>Test</b>.</div>
+      </div>
+    </div>
+    <aside class="card inspector insp" id="insp-deps" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 4. A MESSAGE IN THE CORE ============ -->
+<section class="view" id="v-message" role="tabpanel" aria-labelledby="t-message" hidden>
+  <p class="lede">The path of <b>a single message inside the core</b>: someone changes the content of a prompt through the subject <code>prompt.content.update</code>. Step forward and watch which layers light up. The business rule happens in just one step.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="scroll"><svg class="diagram" id="svg-seq" viewBox="0 0 780 540" role="img" aria-label="Sequence diagram with seven participants and twelve messages"></svg></div>
+      <div class="stepbar">
+        <button class="btn" id="seq-prev" type="button">◀ Previous</button>
+        <button class="btn pri" id="seq-next" type="button">Next ▶</button>
+        <button class="btn" id="seq-play" type="button">Play</button>
+        <button class="btn" id="seq-reset" type="button">↺ Start</button>
+        <span class="count" id="seq-count"></span>
+      </div>
+    </div>
+    <aside class="card inspector insp" id="insp-seq" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 5. END TO END ============ -->
+<section class="view" id="v-journey" role="tabpanel" aria-labelledby="t-journey" hidden>
+  <p class="lede">The same operation, but starting from the <b>click in the browser</b>: the user presses <i>Save and activate</i>. Follow the request through three projects and three borders (HTTP, NATS and SQL), and back.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="scroll"><svg class="diagram" id="svg-e2e" viewBox="0 0 780 540" role="img" aria-label="Sequence diagram from the browser to SQLite and back"></svg></div>
+      <div class="stepbar">
+        <button class="btn" id="e2e-prev" type="button">◀ Previous</button>
+        <button class="btn pri" id="e2e-next" type="button">Next ▶</button>
+        <button class="btn" id="e2e-play" type="button">Play</button>
+        <button class="btn" id="e2e-reset" type="button">↺ Start</button>
+        <span class="count" id="e2e-count"></span>
+      </div>
+    </div>
+    <aside class="card inspector insp" id="insp-e2e" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 6. SIMULATOR ============ -->
+<section class="view" id="v-simulator" role="tabpanel" aria-labelledby="t-simulator" hidden>
+  <p class="lede">A real <b>Prompt</b>, only on screen: the rules below are the same as the domain's. Press the buttons, including the ones that <b>should fail</b>, and watch the state, the events and the error that the core would reply with.</p>
+  <div class="layout">
+    <div class="card stage sim-grid">
+      <div class="scroll"><svg class="diagram" id="svg-state" viewBox="0 0 520 170" style="min-width:520px" role="img" aria-label="State machine: ACTIVE, INACTIVE and DELETED"></svg></div>
+      <div>
+        <div class="svt-s" style="font:600 11px var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Versions (click one to activate it)</div>
+        <div class="versions" id="sim-versions"></div>
+      </div>
+      <div>
+        <label for="sim-content" style="font-size:.85rem;color:var(--muted)">Content of the next version (one diff line per line)</label>
+        <textarea id="sim-content" rows="3">Hey
+world
+end</textarea>
+      </div>
+      <div class="row" id="sim-actions"></div>
+      <div class="result" id="sim-result">Waiting for an action.</div>
+      <div>
+        <div class="row" style="margin-bottom:8px">
+          <b style="font-size:.92rem">Compare versions</b>
+          <label for="cmp-a" class="svt-s" style="font:400 .85rem var(--font)">from</label><select id="cmp-a"></select>
+          <label for="cmp-b" class="svt-s" style="font:400 .85rem var(--font)">to</label><select id="cmp-b"></select>
+          <button class="btn" id="cmp-go" type="button">Compare</button>
+        </div>
+        <div id="cmp-out"></div>
+      </div>
+    </div>
+    <aside class="card inspector insp" id="insp-sim" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 7. SUBJECTS AND ROUTES ============ -->
+<section class="view" id="v-subjects" role="tabpanel" aria-labelledby="t-subjects" hidden>
+  <p class="lede">Every NATS subject becomes <b>one use case</b>, which calls <b>one domain method</b>. The api exposes the same operations as <b>HTTP routes</b>, and the front end has a screen for each. Click a row to see the payload, the reply, the events, the possible errors and a ready command to copy.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="filters" id="sub-filters"></div>
+      <div class="scroll">
+        <div class="map-head"><div>NATS subject (adapter)</div><div>Use case (app)</div><div>Call (domain / port)</div></div>
+        <div id="sub-rows"></div>
+      </div>
+      <div class="legend-note"><b>Notice:</b> <code>deactivate()</code> and <code>reactivate()</code> exist in the domain and in the simulator, but <b>have no use case and no subject</b> in the system. That is why the events <code>PromptDeactivated</code> and <code>PromptReactivated</code> are never published by the service today.</div>
+    </div>
+    <aside class="card inspector insp" id="insp-sub" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 8. ERRORS ============ -->
+<section class="view" id="v-errors" role="tabpanel" aria-labelledby="t-errors" hidden>
+  <p class="lede">Every failure ends as the <b>same standard JSON</b> and, in the browser, as a toast. Pick a situation to see where it starts, which code travels, which exception the api raises and which HTTP status the user gets.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="filters" id="err-filters"></div>
+      <div class="scroll"><div id="err-rows"></div></div>
+      <div class="legend-note"><b>Rule of thumb:</b> clients rely on the <code>code</code>, never on the <code>message</code>. The messages are written for people (in Portuguese, in this project); the codes are the contract.</div>
+    </div>
+    <aside class="card inspector insp" id="insp-err" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 9. WIRING ============ -->
+<section class="view" id="v-wiring" role="tabpanel" aria-labelledby="t-wiring" hidden>
+  <p class="lede"><code>main.py</code> of the core is the only file that knows every layer: it creates the pieces and connects them, <b>in this order</b>. Step forward and watch the object graph grow.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="wire-steps" id="wire-steps"></div>
+      <div class="scroll"><svg class="diagram" id="svg-wire" viewBox="0 0 780 360" role="img" aria-label="Object graph created by main.py"></svg></div>
+    </div>
+    <aside class="card inspector insp" id="insp-wire" aria-live="polite"></aside>
+  </div>
+</section>
+
+<footer>Map built from <code>docs/prompt-vault-study-guide.pdf</code> and from the code in <code>core/src/</code>, <code>api/</code> and <code>front/src/</code>. Class, method, subject, route and error names are the project's own.</footer>
+</main>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const SVGNS = "http://www.w3.org/2000/svg";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------------------------------------------------------------- data */
+const LAYERS = {
+  domain: { name: "domain", folder: "core/src/domain/", lines: 605,
+    role: "The business rules, in pure Python. Nothing here knows that a database, a network or a terminal exists.",
+    rest: "The recipes and the kitchen hygiene rules.",
+    imports: [], importsNote: "nobody (only the Python standard library)",
+    files: ["entities/prompt.py: Prompt, the root aggregate", "entities/prompt_version.py: the immutable version", "status.py: PromptStatus and the transitions", "events.py: the 7 domain events", "exceptions.py: business errors", "diff/: ChangeType, DiffEntry, VersionDiff and the diff strategies"],
+    gold: "If the domain imported anything external, the rules would be tied to a technology." },
+  app: { name: "app", folder: "core/src/app/", lines: 316,
+    role: "Use cases. Load the prompt, call the domain, save and publish. They return the aggregate and decide no rule.",
+    rest: "The chef who coordinates the preparation of each order.",
+    imports: ["domain", "port"],
+    files: ["commands/: 6 write use cases", "queries/: 5 read use cases (with CompareVersions)", "exceptions.py and _helpers.py: PromptNotFoundError and require_prompt"],
+    gold: "Use cases receive their collaborators through the constructor and never create anything concrete." },
+  port: { name: "port", folder: "core/src/port/", lines: 57,
+    role: "Three contracts (Protocols) that the core demands from the outside world.",
+    rest: "The order form and the supplier contract.",
+    imports: ["domain"], importsNote: "domain, only to type Prompt and DomainEvent",
+    files: ["prompt_repository.py: get, save, list_active, list_deleted", "event_publisher.py: publish(events)", "unit_of_work.py: the transaction, with commit and rollback"],
+    gold: "Minimal contracts: only what the use cases really need." },
+  adapter: { name: "adapter", folder: "core/src/adapter/", lines: 877,
+    role: "Translates and connects technologies: implements the ports with SQLAlchemy and exposes the use cases through NATS. No business rule.",
+    rest: "The waiter, who translates the customer, and the delivery person, who talks to the supplier.",
+    imports: ["app", "port", "domain", "infra"],
+    files: ["persistence/: ORM models, mapper, repository and unit of work", "messaging/: subjects, handlers, serializers, server, event publisher, correlation id and error codes"],
+    gold: "ORM models and JSON never cross into the core." },
+  infra: { name: "infra", folder: "core/src/infra/", lines: 150,
+    role: "Only configures the technologies: settings, the SQLite engine, the NATS client and logging.",
+    rest: "The equipment: stove, fridge and phone.",
+    imports: [], importsNote: "nothing from the project",
+    files: ["settings.py: environment variables", "database.py: WAL, foreign_keys and busy_timeout", "nats_client.py: connection and connection events", "logging.py: structlog + rich"],
+    gold: "It configures, but decides and translates nothing." },
+  ext: { name: "external world", folder: "outside the process", lines: null,
+    role: "Whoever talks to the core or stores its data: NATS clients (the api, the nats CLI, other services), the SQLite file and the terminal.",
+    rest: "The customers, the street and the suppliers.",
+    imports: [], importsNote: "not project code",
+    files: ["NATS clients send messages and receive replies and events", "The file prompt_vault.db stores prompts and versions", "The terminal shows the logs formatted by rich"],
+    gold: "Only the adapters talk to the external world." },
+};
+const ORDER = ["domain", "app", "port", "adapter", "infra"];
+const KIND_NAME = { front: "front/", api: "api/", core: "core/", nats: "NATS", ext: "external" };
+const badge = k => k in LAYERS ? `<span class="badge b-${k === "ext" ? "ext" : k}">${LAYERS[k].name}/</span>` : `<span class="badge b-${k}">${KIND_NAME[k] || k}</span>`;
+
+/* ---------------------------------------------------------------- tabs + hash routing */
+const VIEWS = [["system", "System"], ["layers", "Layers"], ["dependencies", "Dependencies"], ["message", "A message"], ["journey", "End to end"], ["simulator", "Simulator"], ["subjects", "Subjects"], ["errors", "Errors"], ["wiring", "Wiring"]];
+const tabs = $("#tabs");
+tabs.innerHTML = VIEWS.map(([id, label]) => `<button class="tab" role="tab" id="t-${id}" data-view="${id}" aria-selected="false" aria-controls="v-${id}">${label}</button>`).join("");
+function show(id) {
+  if (!VIEWS.some(v => v[0] === id)) id = "system";
+  VIEWS.forEach(([v]) => { $("#v-" + v).hidden = v !== id; $("#t-" + v).setAttribute("aria-selected", v === id); });
+  if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+}
+tabs.addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) { show(b.dataset.view); b.scrollIntoView({ block: "nearest", inline: "nearest" }); } });
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+
+/* ---------------------------------------------------------------- 1. system */
+const SYS = {
+  front: { kind: "front", title: "front/", sub: "Browser application", box: [20, 110, 150, 90], t: "front", s: "React · TypeScript",
+    role: "A single-page application: a dashboard to list, search, create, edit, compare, browse and recover prompts. It talks only to the api, over HTTP and JSON.",
+    tech: "React 19, TypeScript, Vite, Tailwind CSS, Axios. Types generated from the api's OpenAPI document.", size: "About 1,900 lines of TypeScript",
+    talks: ["api (HTTP, through the Vite proxy /api in development)"],
+    files: ["src/App.tsx: state, hash router, navigation bar, toasts", "src/api/: Axios client and one function per endpoint", "src/components/: lists, modals, compare, timeline, trash"],
+    note: "It never computes a diff and never touches NATS: it only draws what the api returns." },
+  api: { kind: "api", title: "api/", sub: "HTTP gateway", box: [220, 110, 150, 90], t: "api", s: "FastAPI",
+    role: "Validates the shape of each request, sends one NATS request per use case and returns the core's data untouched. Every failure becomes the same standard JSON error.",
+    tech: "Python, FastAPI, Pydantic, uvicorn, pytest.", size: "About 660 lines of code and 695 of tests (117 unit tests)",
+    talks: ["front (HTTP)", "NATS (request / reply)"],
+    files: ["controllers/: the router, one line per route", "services/: PromptService, one method per use case", "messaging/: NATSPublisher, the only module that imports nats-py", "models/ and utils/: DTOs, exceptions and handlers"],
+    note: "It holds no business rule: it transports, it does not reshape." },
+  nats: { kind: "nats", title: "NATS", sub: "Message broker", box: [420, 110, 130, 90], t: "NATS", s: "broker",
+    role: "A central server where clients publish messages on subjects and others subscribe. Provides publish/subscribe, request/reply and wildcards.",
+    tech: "NATS server 2.x (Docker), nats-py 2.16 in both Python projects.", size: "Started with docker compose up -d",
+    talks: ["api (requests)", "core (subscribes to the prompt.* subjects)", "any other NATS client, such as the nats CLI"],
+    files: ["core/docker-compose.yml: the local server (port 4222, monitoring on 8222)"],
+    note: "Events go out on prompt.events.> and commands that fail without a reply address go to prompt.errors." },
+  core: { kind: "core", title: "core/", sub: "Business service", box: [600, 110, 160, 90], t: "core", s: "hexagonal",
+    role: "The business: prompts, versions, states, diff. No HTTP; it listens to NATS subjects. Organized as ports and adapters around a pure domain.",
+    tech: "Python 3.13, NATS, SQLAlchemy + aiosqlite, structlog + rich.", size: "About 2,100 lines of Python",
+    talks: ["NATS (subscribes and publishes events)", "SQLite (SQL)"],
+    files: ["src/domain/, app/, port/: the heart", "src/adapter/: persistence and messaging", "src/infra/ and src/main.py: configuration and wiring"],
+    note: "See the next views: layers, dependencies, a message and wiring." },
+  sqlite: { kind: "ext", title: "SQLite", sub: "A single file", box: [600, 250, 160, 70], t: "SQLite", s: "prompt_vault.db",
+    role: "The database: a file with two tables, prompts and prompt_versions. History is append-only.",
+    tech: "WAL mode, foreign keys on, busy timeout; dates stored in UTC.", size: "Created on the first run",
+    talks: ["core (only)"], files: ["adapter/persistence/models.py: the tables", "infra/database.py: the engine settings"],
+    note: "The file is ignored by Git (*.db)." },
+  clients: { kind: "ext", title: "Other NATS clients", sub: "nats CLI, future services", box: [390, 250, 190, 70], t: "NATS clients", s: "nats CLI, services",
+    role: "Anything that speaks NATS can use the core directly, without going through the api. The smoke tests of the core do exactly that.",
+    tech: "NATS CLI 0.3.1.", size: "",
+    talks: ["NATS"], files: ["core/smoke_test.sh", "smoke_test.sh (the global one uses both HTTP and NATS)"],
+    note: "Subscribers of prompt.events.> can react to every change." },
+};
+function systemSVG() {
+  const box = ([x, y, w, h], k, t, s, id) => `<g class="node" data-node="${id}" tabindex="0" role="button" aria-label="${t}"><rect class="l-${k}" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/>
+    <text class="svt-b" x="${x + w / 2}" y="${y + h / 2 - 3}" text-anchor="middle" style="font-size:15px">${esc(t)}</text><text class="svt-s" x="${x + w / 2}" y="${y + h / 2 + 15}" text-anchor="middle">${esc(s)}</text></g>`;
+  const arr = (d, dashed = false) => `<path d="${d}" fill="none" stroke="var(--muted)" stroke-width="1.6" ${dashed ? 'stroke-dasharray="5 4"' : ""} marker-end="url(#sah2)"/>`;
+  $("#svg-system").innerHTML = `
+    <defs><marker id="sah2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
+    ${arr("M172 140H218")}${arr("M218 172H172", true)}${arr("M372 140H418")}${arr("M418 172H372", true)}${arr("M552 140H598")}${arr("M598 172H552", true)}
+    ${arr("M680 202V248")}${arr("M485 250V202")}
+    <text class="svt-s" x="195" y="132" text-anchor="middle">HTTP</text><text class="svt-s" x="395" y="132" text-anchor="middle">request</text><text class="svt-s" x="395" y="190" text-anchor="middle">reply</text><text class="svt-s" x="575" y="132" text-anchor="middle">msg</text>
+    <text class="svt-s" x="700" y="230">SQL</text>
+    <text class="svt-s" x="20" y="226">Vite proxy: /api</text><text class="svt-s" x="220" y="226">validates and maps errors</text>
+    <text class="svt-s" x="20" y="60" style="font-weight:600">Browser</text><text class="svt-s" x="220" y="60" style="font-weight:600">Gateway</text><text class="svt-s" x="600" y="60" style="font-weight:600">Business service</text>
+    <text class="svt-s" x="20" y="300">Events: prompt.events.*  ·  errors: prompt.errors</text>
+    ${Object.entries(SYS).map(([id, v]) => box(v.box, v.kind, v.t, v.s, id)).join("")}`;
+  const svg = $("#svg-system");
+  const pick = el => { const g = el.closest("[data-node]"); if (!g) return; $$(".node", svg).forEach(n => n.classList.toggle("sel", n === g)); sysInspector(g.dataset.node); };
+  svg.addEventListener("click", e => pick(e.target));
+  svg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e.target); } });
+  $('[data-node="core"]', svg).classList.add("sel"); sysInspector("core");
+}
+function sysInspector(id) {
+  const v = SYS[id];
+  $("#insp-system").innerHTML = `
+    <div class="insp-h">${badge(v.kind)}<h2>${esc(v.title)}</h2></div>
+    <p>${esc(v.role)}</p>
+    <h3>Technology</h3><p>${esc(v.tech)}</p>${v.size ? `<p class="svt-s" style="font:400 .85rem var(--font);color:var(--muted)">${esc(v.size)}</p>` : ""}
+    <h3>Talks to</h3><ul>${v.talks.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+    <h3>Where to look</h3><ul>${v.files.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+    <div class="note">${esc(v.note)}</div>`;
+}
+
+/* ---------------------------------------------------------------- 2. layers */
+function layersInspector(k) {
+  const L = LAYERS[k];
+  const max = 877;
+  const bars = ORDER.map(o => `<div class="bar ${o === k ? "cur" : ""}"><span>${o}</span><i style="--w:${LAYERS[o].lines / max * 100}%;--c:var(--${o})"></i><span>${LAYERS[o].lines}</span></div>`).join("");
+  const imp = L.imports.length ? L.imports.map(i => `<span class="chip">${i}</span>`).join("") : "";
+  $("#insp-layers").innerHTML = `
+    <div class="insp-h">${badge(k)}<h2>${esc(L.folder)}</h2></div>
+    <p>${esc(L.role)}</p>
+    <div class="quote"><b>In the restaurant:</b> ${esc(L.rest)}</div>
+    <h3>May import</h3>
+    <div class="chips">${imp || ""}${L.importsNote && (!L.imports.length || k === "port") ? `<span class="svt-s" style="font:400 .88rem var(--font);color:var(--muted)">${esc(L.importsNote)}</span>` : ""}</div>
+    <h3>What lives here</h3><ul>${L.files.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+    ${L.lines ? `<h3>Lines of Python</h3><div class="bars">${bars}</div>` : ""}
+    <h3>Golden rule</h3><p>${esc(L.gold)}</p>`;
+}
+function layersSVG() {
+  const actor = (x, y, w, h, t, s) => `<g class="ring" data-layer="ext" tabindex="0" role="button" aria-label="External world: ${t}"><rect class="l-ext" x="${x}" y="${y}" width="${w}" height="${h}" rx="9" style="stroke:var(--muted)"/><text class="svt-b" x="${x + w / 2}" y="${y + h / 2 - 2}" text-anchor="middle" style="font-size:12px">${t}</text><text class="svt-s" x="${x + w / 2}" y="${y + h / 2 + 14}" text-anchor="middle">${s}</text></g>`;
+  const ring = (k, x, y, w, h, label) => `<g class="ring" data-layer="${k}" tabindex="0" role="button" aria-label="Layer ${k}" style="color:var(--${k})"><rect class="l-${k}" x="${x}" y="${y}" width="${w}" height="${h}" rx="14"/><text class="svt-b" x="${x + w / 2}" y="${y + 22}" text-anchor="middle" style="fill:var(--${k})">${label}</text></g>`;
+  $("#svg-layers").innerHTML = `
+    <rect class="l-ext" x="1" y="1" width="758" height="468" rx="16" stroke-width="1.2"/>
+    <text class="cap" x="18" y="26">EXTERNAL WORLD</text>
+    ${actor(14, 190, 112, 70, "NATS clients", "api, nats CLI")}
+    ${actor(634, 190, 112, 70, "SQLite file", "prompt_vault.db")}
+    ${actor(634, 62, 112, 60, "Terminal", "rich logs")}
+    ${ring("adapter", 150, 28, 460, 382, "adapter/  ·  translates and connects")}
+    ${ring("port", 190, 70, 380, 298, "port/  ·  contracts")}
+    ${ring("app", 228, 110, 304, 214, "app/  ·  use cases")}
+    <g class="ring" data-layer="domain" tabindex="0" role="button" aria-label="Layer domain" style="color:var(--domain)">
+      <rect class="l-domain" x="270" y="150" width="220" height="130" rx="14"/>
+      <text class="svt-b" x="380" y="196" text-anchor="middle" style="fill:var(--domain);font-size:16px">domain/</text>
+      <text class="svt" x="380" y="218" text-anchor="middle">Prompt · PromptVersion</text>
+      <text class="svt-s" x="380" y="236" text-anchor="middle">rules · states · events</text>
+      <text class="svt-s" x="380" y="252" text-anchor="middle">pure Python</text></g>
+    <g class="ring" data-layer="infra" tabindex="0" role="button" aria-label="Layer infra" style="color:var(--infra)">
+      <rect class="l-infra" x="150" y="424" width="460" height="32" rx="9"/>
+      <text class="svt-b" x="380" y="444" text-anchor="middle" style="fill:var(--infra)">infra/  ·  configures the technologies of the adapters</text></g>
+    <g stroke="var(--muted)" stroke-width="1.6" fill="var(--muted)">
+      <path d="M126 225H146" /><path d="M146 225l-7-4v8z" stroke="none"/>
+      <path d="M610 225H630"/><path d="M630 225l-7-4v8z" stroke="none"/>
+      <path d="M610 92H630"/><path d="M630 92l-7-4v8z" stroke="none"/></g>
+    <text class="svt-s" x="70" y="284" text-anchor="middle">messages</text>
+    <text class="svt-s" x="690" y="284" text-anchor="middle">SQL</text>`;
+  const svg = $("#svg-layers");
+  const pick = el => {
+    const g = el.closest("[data-layer]"); if (!g) return;
+    $$(".ring", svg).forEach(r => r.classList.toggle("sel", r === g));
+    layersInspector(g.dataset.layer);
+  };
+  svg.addEventListener("click", e => pick(e.target));
+  svg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e.target); } });
+  $('[data-layer="domain"]', svg).classList.add("sel");
+  layersInspector("domain");
+}
+
+/* ---------------------------------------------------------------- 3. dependencies */
+const NODES = { adapter: [40, 104, 220, 50], infra: [500, 104, 220, 50], app: [40, 204, 220, 50], port: [500, 204, 220, 50], domain: [270, 304, 220, 50] };
+const SUB = { adapter: "messaging · persistence", infra: "settings · db · nats · log", app: "use cases", port: "Protocols (contracts)", domain: "the core" };
+const EDGES = [
+  { f: "adapter", t: "infra", d: "M260 129H498", why: "uses the SQLite engine, the NatsClient and logging" },
+  { f: "adapter", t: "app", d: "M150 154V202", why: "calls the use cases from the handlers" },
+  { f: "adapter", t: "port", d: "M260 146L498 214", why: "implements the contracts (repository, unit of work, publisher)" },
+  { f: "adapter", t: "domain", d: "M40 129H16V329H268", why: "the mapper rebuilds the Prompt and its versions" },
+  { f: "app", t: "port", d: "M260 229H498", why: "uses the contracts received through the constructor" },
+  { f: "app", t: "domain", d: "M200 254L296 302", why: "calls the rules (Prompt, domain commands)" },
+  { f: "port", t: "domain", d: "M560 254L464 302", why: "types Prompt and DomainEvent in the contracts" },
+];
+const NOWHY = {
+  domain: "The domain knows nobody. It is pure Python: importing something external would tie the rules to a technology.",
+  port: "The port only sees the domain, to type Prompt and DomainEvent. Importing anything else would invert the dependency.",
+  app: "The app orchestrates using contracts (port). Importing adapter or infra would tie the use case to a concrete technology.",
+  infra: "The infra only configures technology and imports nothing from the project. The adapters are the ones that use it.",
+};
+function depsSVG() {
+  const nodes = Object.entries(NODES).map(([k, [x, y, w, h]]) => `
+    <g class="node" data-node="${k}" tabindex="0" role="button" aria-label="Layer ${k}"><rect class="l-${k}" x="${x}" y="${y}" width="${w}" height="${h}" rx="9"/>
+    <text class="svt-b" x="${x + w / 2}" y="${y + 21}" text-anchor="middle" style="fill:var(--${k});font-size:14px">${k}/</text>
+    <text class="svt-s" x="${x + w / 2}" y="${y + 38}" text-anchor="middle">${SUB[k]}</text></g>`).join("");
+  $("#svg-deps").innerHTML = `
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
+    <text class="svt-s" x="300" y="34">main.py knows everyone: it is the composition root</text>
+    ${EDGES.map((e, i) => `<path class="edge" data-e="${i}" d="${e.d}" marker-end="url(#ah)"/>`).join("")}
+    <path class="edge" id="probe" d="" marker-end="url(#ah)" style="display:none"/>
+    <g id="probe-x" style="display:none"><circle r="13" fill="var(--bad)"/><path d="M-5 -5L5 5M5 -5L-5 5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
+    ${nodes}
+    <text class="svt-s" x="380" y="378" text-anchor="middle">No arrow starts at domain/</text>`;
+}
+function depsInspector(k) {
+  const outs = EDGES.filter(e => e.f === k), ins = EDGES.filter(e => e.t === k);
+  const li = (list, key, verb) => list.length ? `<ul>${list.map(e => `<li><b>${e[key]}</b>: ${esc(e.why)}</li>`).join("")}</ul>` : `<p>${verb}</p>`;
+  $("#insp-deps").innerHTML = `
+    <div class="insp-h">${badge(k)}<h2>${LAYERS[k].folder}</h2></div>
+    <h3>Imports (blue arrows)</h3>${li(outs, "t", NOWHY[k] || "It may import everything below it.")}
+    <h3>Is imported by (orange arrows)</h3>${li(ins, "f", "Nobody imports it, except main.py. It is the outermost layer.")}
+    <h3>Rule</h3><p>${esc(LAYERS[k].gold)}</p>`;
+}
+function depsInit() {
+  depsSVG();
+  const svg = $("#svg-deps");
+  const sel = { v: null };
+  const paint = k => {
+    $$(".node", svg).forEach(n => { n.classList.toggle("sel", n.dataset.node === k); n.classList.toggle("faded", !!k && n.dataset.node !== k && !EDGES.some(e => (e.f === k && e.t === n.dataset.node) || (e.t === k && e.f === n.dataset.node))); });
+    $$(".edge[data-e]", svg).forEach(p => { const e = EDGES[p.dataset.e]; p.classList.remove("out", "in", "faded"); if (k) { if (e.f === k) p.classList.add("out"); else if (e.t === k) p.classList.add("in"); else p.classList.add("faded"); } });
+  };
+  const choose = k => { sel.v = k; paint(k); depsInspector(k); };
+  svg.addEventListener("mouseover", e => { const n = e.target.closest(".node"); if (n) { paint(n.dataset.node); depsInspector(n.dataset.node); } });
+  svg.addEventListener("mouseleave", () => paint(sel.v));
+  svg.addEventListener("click", e => { const n = e.target.closest(".node"); if (n) choose(n.dataset.node); });
+  svg.addEventListener("keydown", e => { const n = e.target.closest(".node"); if (n && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); choose(n.dataset.node); } });
+  choose("domain");
+
+  const opts = ORDER.map(k => `<option value="${k}">${k}/</option>`).join("");
+  $("#dep-from").innerHTML = opts; $("#dep-to").innerHTML = opts;
+  $("#dep-from").value = "domain"; $("#dep-to").value = "adapter";
+  const centre = k => { const [x, y, w, h] = NODES[k]; return [x + w / 2, y + h / 2]; };
+  const test = (f, t) => {
+    const probe = $("#probe", svg), cross = $("#probe-x", svg), box = $("#dep-verdict");
+    probe.classList.remove("ok", "no"); cross.style.display = "none";
+    if (f === t) { probe.style.display = "none"; box.className = "verdict"; box.innerHTML = `<b>Same layer.</b> Files in the same folder may import each other freely.`; return; }
+    const edge = EDGES.find(e => e.f === f && e.t === t);
+    const [x1, y1] = centre(f), [x2, y2] = centre(t);
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+    const sx = x1 + dx / len * 26, sy = y1 + dy / len * 20, ex = x2 - dx / len * 28, ey = y2 - dy / len * 22;
+    probe.setAttribute("d", `M${sx} ${sy}L${ex} ${ey}`); probe.style.display = "";
+    if (edge) {
+      probe.classList.add("ok"); box.className = "verdict ok";
+      box.innerHTML = `<b class="ok">Allowed.</b> ${f}/ imports ${t}/: ${esc(edge.why)}.`;
+    } else {
+      probe.classList.add("no"); cross.setAttribute("transform", `translate(${(sx + ex) / 2} ${(sy + ey) / 2})`); cross.style.display = ""; box.className = "verdict no";
+      const why = NOWHY[f] || "There is no arrow in that direction in the project.";
+      box.innerHTML = `<b class="no">Blocked.</b> ${f}/ cannot import ${t}/. ${esc(why)}`;
+    }
+  };
+  $("#dep-go").addEventListener("click", () => test($("#dep-from").value, $("#dep-to").value));
+  [["domain", "adapter"], ["domain", "infra"], ["app", "adapter"], ["port", "app"], ["infra", "domain"], ["adapter", "domain"]].forEach(([f, t]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.innerHTML = `${f} → ${t}`;
+    b.addEventListener("click", () => { $("#dep-from").value = f; $("#dep-to").value = t; test(f, t); }); $("#dep-quick").append(b);
+  });
+}
+
+/* ---------------------------------------------------------------- 4 and 5. sequence diagrams (one engine, two diagrams) */
+function makeSeq({ svgId, inspId, ids, PART, STEPS, label }) {
+  const S = { i: 0, timer: null };
+  const W = 780, step = Math.floor((W - 24) / PART.length), xs = PART.map((_, i) => 12 + step / 2 + i * step), y0 = 96, gap = 36;
+  const kindClass = k => `l-${k}`;
+  const head = PART.map((p, i) => `<g><rect class="${kindClass(p.k)}" x="${xs[i] - step / 2 + 5}" y="8" width="${step - 10}" height="44" rx="8" stroke-width="1.5"/>
+    <text class="svt-b" x="${xs[i]}" y="${p.t[1] ? 27 : 34}" text-anchor="middle" style="font-size:11px">${p.t[0]}</text>${p.t[1] ? `<text class="svt-b" x="${xs[i]}" y="41" text-anchor="middle" style="font-size:11px">${p.t[1]}</text>` : ""}</g>
+    <line class="lifeline" x1="${xs[i]}" y1="52" x2="${xs[i]}" y2="528"/>`).join("");
+  const arrows = STEPS.map((s, k) => {
+    const y = y0 + k * gap, x1 = xs[s.a], x2 = s.a === s.b ? xs[s.a] + 40 : xs[s.b], dir = x2 > x1 ? 1 : -1, mx = (x1 + x2) / 2;
+    const w = s.l.length * 5.6 + 10;
+    return `<g class="arrow-g future" data-k="${k}" tabindex="0" role="button" aria-label="Step ${k + 1}: ${esc(s.l)}">
+      <line class="ln" x1="${x1}" y1="${y}" x2="${x2 - dir * 6}" y2="${y}" ${s.ret ? 'stroke-dasharray="5 4"' : ""}/>
+      <path d="M${x2} ${y} l${-dir * 8} -4.5 v9z" fill="currentColor" style="color:var(--muted)"/>
+      <rect x="${mx - w / 2}" y="${y - 17}" width="${w}" height="14" fill="var(--surface)" rx="3"/>
+      <text class="lbl" x="${mx}" y="${y - 6.5}" text-anchor="middle">${esc(s.l)}</text>
+      <circle class="num" cx="${x1 + dir * 11}" cy="${y + 9}" r="7"/><text class="numt" x="${x1 + dir * 11}" y="${y + 12}">${k + 1}</text></g>`;
+  }).join("");
+  $("#" + svgId).innerHTML = `${head}${arrows}<g class="dot" style="transform:translate(${xs[0]}px,${y0}px)"><circle r="6.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/></g>`;
+  const go = (i, animate = true) => {
+    i = Math.max(0, Math.min(STEPS.length - 1, i)); S.i = i;
+    const s = STEPS[i], svg = $("#" + svgId);
+    $$(".arrow-g", svg).forEach(g => { const k = +g.dataset.k; g.classList.toggle("cur", k === i); g.classList.toggle("done", k < i); g.classList.toggle("future", k > i); });
+    const dot = $(".dot", svg), y = y0 + i * gap, bx = s.a === s.b ? xs[s.a] + 40 : xs[s.b];
+    if (animate && !reduceMotion) { dot.style.transition = "none"; dot.style.transform = `translate(${xs[s.a]}px,${y}px)`; dot.getBoundingClientRect(); dot.style.transition = ""; }
+    dot.style.transform = `translate(${bx}px,${y}px)`;
+    $("#" + ids.count).textContent = `step ${i + 1} of ${STEPS.length}`;
+    $("#" + ids.prev).disabled = i === 0; $("#" + ids.next).disabled = i === STEPS.length - 1;
+    const layers = new Set(s.layers || [s.layer]);
+    $("#" + inspId).innerHTML = `
+      <div class="insp-h">${badge(s.layer)}<h2>${i + 1}. ${esc(s.title)}</h2></div>
+      <div class="lay-row">${label.map(k => `<span class="badge b-${k} ${layers.has(k) ? "on" : ""}">${k in LAYERS ? k : (KIND_NAME[k] || k)}</span>`).join("")}${s.edge ? `<span class="badge b-ext on">crosses a border</span>` : `<span class="badge b-ext">internal</span>`}</div>
+      ${s.hot ? `<div class="note hot"><b>The business rule lives here.</b> Compare with the other steps: this is the only one without NATS, without SQL and without JSON.</div>` : ""}
+      <p>${esc(s.text)}</p>
+      <h3>In the code</h3><pre class="code">${esc(s.code)}</pre>
+      ${s.log ? `<h3>What you would see</h3>${s.log.split("\n").map(l => `<div class="logline">${esc(l)}</div>`).join("")}` : ""}`;
+  };
+  const stop = () => { clearInterval(S.timer); S.timer = null; $("#" + ids.play).textContent = "Play"; };
+  go(0, false);
+  $("#" + ids.next).onclick = () => { stop(); go(S.i + 1); };
+  $("#" + ids.prev).onclick = () => { stop(); go(S.i - 1); };
+  $("#" + ids.reset).onclick = () => { stop(); go(0, false); };
+  $("#" + ids.play).onclick = () => {
+    if (S.timer) return stop();
+    if (S.i >= STEPS.length - 1) go(0, false);
+    $("#" + ids.play).textContent = "Pause";
+    S.timer = setInterval(() => { if (S.i >= STEPS.length - 1) return stop(); go(S.i + 1); }, 2300);
+  };
+  const svg = $("#" + svgId);
+  const pick = e => { const g = e.target.closest(".arrow-g"); if (g) { stop(); go(+g.dataset.k); } };
+  svg.addEventListener("click", pick);
+  svg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e); } });
+}
+const CORE_PART = [
+  { k: "ext", t: ["NATS", "client"] }, { k: "adapter", t: ["Messaging", "Adapter"] }, { k: "app", t: ["UpdateContent", "UseCase"] },
+  { k: "domain", t: ["Prompt", "(domain)"] }, { k: "adapter", t: ["UnitOfWork", "+ Repository"] }, { k: "ext", t: ["SQLite", ""] }, { k: "adapter", t: ["NatsEvent", "Publisher"] },
+];
+const CORE_STEPS = [
+  { a: 0, b: 1, l: "request prompt.content.update", layer: "adapter", edge: true, title: "The message arrives",
+    text: "The subject receives the request. The adapter decodes the JSON, finds the correlation id (from the header) and starts recording it in every log.",
+    code: `nats request prompt.content.update \\\n  '{"prompt_id": "<ID>", "content": "Hey\\nworld\\nend"}' \\\n  -H "X-Correlation-Id:my-trace"`,
+    log: "INFO  event_received  subject=prompt.content.update kind=command has_reply=True correlation_id=my-trace" },
+  { a: 1, b: 2, l: "execute(UpdateContentCommand)", layer: "adapter", title: "The handler translates",
+    text: "The handler validates only the format (UUID and text), builds the command and asks the factory for a new use case, with its own session.",
+    code: `command = UpdateContentCommand(\n    prompt_id=require_uuid(p, "prompt_id"), content=require_str(p, "content")\n)\nprompt, version = await factories.update_content().execute(command)\nreturn version_response(prompt, version)`,
+    log: "INFO  use_case_started  use_case=UpdateContent correlation_id=my-trace" },
+  { a: 2, b: 4, l: "async with uow · get(prompt_id)", layer: "app", title: "The transaction opens",
+    text: "The use case opens the transaction. The Unit of Work takes the write key (an asyncio.Lock) and opens a session, so two commands do not step on each other.",
+    code: `async with self._uow:\n    prompt = await require_prompt(self._uow.prompts, command.prompt_id)`, log: "" },
+  { a: 4, b: 5, l: "SELECT prompt + versions", layer: "adapter", edge: true, title: "The database is queried",
+    text: "The repository reads the prompt row and loads the versions along with it (selectinload). This is the first contact with SQLite.",
+    code: `select(PromptModel)\n    .where(PromptModel.id == prompt_id)\n    .options(selectinload(PromptModel.versions))`, log: "" },
+  { a: 4, b: 2, l: "rehydrated Prompt", ret: true, layer: "adapter", title: "The aggregate is rebuilt",
+    text: "The mapper translates rows into domain objects with Prompt.rehydrate. It revalidates the invariants and emits no events: reconstituting is not a new fact.",
+    code: `return Prompt.rehydrate(id=UUID(row.id), name=row.name, status=PromptStatus(row.status),\n    versions=versions, active_version_number=row.active_version_number, ...)`, log: "" },
+  { a: 2, b: 3, l: "add_version(content, activate=True)", layer: "domain", hot: true, title: "The business rule runs",
+    text: "The only decision point. The Prompt refuses if it is deleted, validates the content, numbers the version (len + 1), activates it and records two events. Not one line here touches a database or the network.",
+    code: `version = prompt.add_version(command.content, activate=True)\n# 1. _ensure_not_deleted\n# 2. PromptVersion(...) validates the content\n# 3. records PromptVersionAdded\n# 4. activate_version() records PromptVersionActivated`, log: "" },
+  { a: 2, b: 4, l: "save(prompt) + commit()", layer: "app", title: "Save and confirm",
+    text: "The use case asks to save the aggregate and confirms the transaction. History only grows: the repository inserts only the new versions.",
+    code: `await self._uow.prompts.save(prompt)\nawait self._uow.commit()`, log: "" },
+  { a: 4, b: 5, l: "INSERT version · UPDATE prompt", layer: "adapter", edge: true, title: "The database writes",
+    text: "A new row in prompt_versions and the active version updated in prompts. Older versions stay intact. When the block ends, the write key is released.",
+    code: `INSERT INTO prompt_versions (...) VALUES (...);\nUPDATE prompts SET active_version_number = ?, updated_at = ? WHERE id = ?;`,
+    log: "INFO  prompt_saved  prompt_id=... versions=4\nINFO  transaction_committed  correlation_id=my-trace" },
+  { a: 2, b: 6, l: "publish(prompt.pull_events())", layer: "app", title: "The events leave the domain",
+    text: "Only after the commit does the use case hand the recorded events to the publisher. Publishing before would announce something that might not have happened.",
+    code: `await self._publisher.publish(prompt.pull_events())\nreturn prompt, version`, log: "" },
+  { a: 6, b: 0, l: "prompt.events.version_added / version_activated", ret: true, layer: "adapter", edge: true, title: "The world is told",
+    text: "The publisher sends each event to prompt.events.<name>, with the correlation id in the header. Whoever subscribes to prompt.events.> receives both.",
+    code: `prompt.events.version_added      X-Correlation-Id: my-trace\nprompt.events.version_activated  X-Correlation-Id: my-trace`,
+    log: "INFO  event_published  subject=prompt.events.version_added prompt_id=..." },
+  { a: 2, b: 1, l: "Prompt and PromptVersion", ret: true, layer: "app", title: "The use case returns",
+    text: "The use case returns the aggregate and the new version to the handler, without knowing for whom. The handler turns them into the JSON contract.",
+    code: `return prompt, version  # the handler: version_response(prompt, version)`,
+    log: "INFO  use_case_completed  use_case=UpdateContent" },
+  { a: 1, b: 0, l: 'reply: {"ok": true, "data": {...}}', ret: true, layer: "adapter", edge: true, title: "The reply comes back",
+    text: "The adapter builds the envelope and publishes it on the client's reply address. The same correlation id comes back in it.",
+    code: `{"ok": true, "correlation_id": "my-trace",\n "data": {"id": "...", "prompt_id": "...", "version_number": 4, "is_active": true, ...}}`,
+    log: "INFO  reply_sent  ok=True correlation_id=my-trace" },
+];
+const E2E_PART = [
+  { k: "front", t: ["Browser", "(React)"] }, { k: "api", t: ["Controller", "(FastAPI)"] }, { k: "api", t: ["PromptService", "NATSPublisher"] },
+  { k: "nats", t: ["NATS", ""] }, { k: "adapter", t: ["Core", "adapter"] }, { k: "domain", t: ["Use case", "+ domain"] }, { k: "ext", t: ["SQLite", ""] },
+];
+const E2E_STEPS = [
+  { a: 0, b: 1, l: "PUT /api/prompts/{id}/content", layer: "front", layers: ["front"], edge: true, title: "The click",
+    text: "In PromptDetailModal, save(true) calls updateContent(id, draft). Axios sends the request. In development the Vite proxy forwards /api/* to the api on port 8000.",
+    code: `// front/src/api/prompts.ts\nhttp.put(\`/prompts/\${promptId}/content\`, { content })`,
+    log: "PUT /api/prompts/6f2a.../content  {\"content\": \"Hey\\nworld\\nend\"}" },
+  { a: 1, b: 2, l: "service.update_content(dto)", layer: "api", layers: ["api"], title: "The controller validates the shape",
+    text: "FastAPI checks that the path is a UUID and the body matches the Pydantic model. Anything else is rejected with 422 before NATS is involved. The route body is one line.",
+    code: `@router.put("/{prompt_id}/content", ...)\nasync def update_content(prompt_id: UUID, body: UpdateContentBody, service = Service):\n    return await service.update_content(UpdateContentRequest(prompt_id=prompt_id, content=body.content))`, log: "" },
+  { a: 2, b: 3, l: "request prompt.content.update", layer: "api", layers: ["api", "nats"], edge: true, title: "The api asks the core",
+    text: "PromptService builds the payload (ids as strings) and picks the subject. NATSPublisher.request sends it and waits at most three seconds.",
+    code: `PROMPT_CONTENT_UPDATE = "prompt.content.update"\nawait self.publisher.request(PROMPT_CONTENT_UPDATE, {"prompt_id": str(req.prompt_id), "content": req.content})`, log: "" },
+  { a: 3, b: 4, l: "deliver + correlation id", layer: "nats", layers: ["nats", "adapter"], edge: true, title: "NATS delivers",
+    text: "The broker routes the message to the subscriber of that subject: the core's messaging adapter. If nobody is subscribed, NATS answers \"no responders\" and the api will answer 503.",
+    code: `# core: MessagingAdapter subscribes to the 11 subjects\n# no subscriber -> NoRespondersError -> CoreUnavailableException (503)`, log: "" },
+  { a: 4, b: 5, l: "execute(UpdateContentCommand)", layer: "adapter", layers: ["adapter", "app"], title: "The core runs the use case",
+    text: "The handler validates the payload and calls the use case: load the prompt, apply the rule, save, commit. This is steps 1 to 8 of the previous view (A message).",
+    code: `prompt, version = await factories.update_content().execute(command)`, log: "" },
+  { a: 5, b: 6, l: "INSERT version · UPDATE prompt", layer: "domain", layers: ["domain", "adapter"], hot: true, edge: true, title: "The rule decides, SQLite stores",
+    text: "Prompt.add_version(content, activate=True) is the single business decision. The repository then writes the new version and moves the active pointer.",
+    code: `INSERT INTO prompt_versions ...;\nUPDATE prompts SET active_version_number = 4 ...;`, log: "" },
+  { a: 5, b: 3, l: "events: prompt.events.version_*", ret: true, layer: "adapter", layers: ["adapter", "nats"], edge: true, title: "Events go out",
+    text: "After the commit, the domain events are published. The api does not wait for them: they are for other subscribers.",
+    code: `prompt.events.version_added\nprompt.events.version_activated`, log: "" },
+  { a: 4, b: 3, l: "reply {ok, data}", ret: true, layer: "adapter", layers: ["adapter", "nats"], edge: true, title: "The core replies",
+    text: "The handler serializes the result into the PromptVersionResponse shape and the adapter publishes the envelope on the reply address.",
+    code: `{"ok": true, "correlation_id": "...", "data": {"id": "...", "version_number": 4, "is_active": true, ...}}`, log: "" },
+  { a: 3, b: 2, l: "reply message", ret: true, layer: "nats", layers: ["nats", "api"], edge: true, title: "The reply reaches the api",
+    text: "NATS returns the message to the waiting NATSPublisher.request call.", code: `msg = await self.nc.request(subject, payload, timeout=timeout)`, log: "" },
+  { a: 2, b: 1, l: "unwrap data (or raise)", ret: true, layer: "api", layers: ["api"], title: "The publisher unwraps",
+    text: "The envelope is validated with ApiWrapper[Any]. If ok is false, the core's error code becomes an exception of the api (see the Errors view). Otherwise only data is returned.",
+    code: `wrapper = ApiWrapper[Any].model_validate(envelope)\nif not wrapper.ok:\n    raise _core_error(code, message, payload)\nreturn wrapper.data`, log: "" },
+  { a: 1, b: 0, l: "200 + JSON (or error JSON)", ret: true, layer: "api", layers: ["api", "front"], edge: true, title: "The api answers",
+    text: "The controller returns the data untouched as the HTTP body. Errors take a different path: the registered handlers render the standard {error: {code, message, details}} JSON.",
+    code: `HTTP/1.1 200 OK\n{"id": "...", "prompt_id": "...", "version_number": 4, "is_active": true, ...}`, log: "" },
+  { a: 0, b: 0, l: "update state · toast", ret: true, layer: "front", layers: ["front"], title: "The screen updates",
+    text: "The front end reloads that prompt (reloadOne), closes the modal and shows a green toast. If something had failed, the Axios interceptor would have thrown an ApiError and the toast would be red, with the message from the api.",
+    code: `await onSaved(prompt.id);   // reloadOne -> GET /prompts/{id}\nonNotify("success", "Nova versão v4 salva e ativada.");  // toast text, in Portuguese: new version v4 saved and activated`, log: "" },
+];
+
+/* ---------------------------------------------------------------- 6. simulator (the domain rules, in JS) */
+class DomainError extends Error { constructor(name, code, msg) { super(msg); this.pyName = name; this.code = code; } }
+const Sim = {
+  reset() { this.status = "ACTIVE"; this.versions = [{ n: 1, content: "Hello\nworld" }]; this.active = 1; this.before = null; this.deletedAt = false; this.events = []; this.emit("PromptCreated", "created"); },
+  emit(name, subj, extra = "") { this.events.unshift({ name, subj, extra }); },
+  guardDeleted(what) { if (this.status === "DELETED") throw new DomainError("PromptDeletedError", "prompt_deleted", `Cannot ${what} a deleted prompt; restore it first`); },
+  transition(target) {
+    const ok = { ACTIVE: ["INACTIVE", "DELETED"], INACTIVE: ["ACTIVE", "DELETED"], DELETED: ["ACTIVE", "INACTIVE"] };
+    if (!ok[this.status].includes(target)) throw new DomainError("InvalidStateTransitionError", "domain_error", `Cannot transition prompt from '${this.status.toLowerCase()}' to '${target.toLowerCase()}'`);
+    this.status = target;
+  },
+  addVersion(content, activate) {
+    this.guardDeleted("add a version to");
+    if (!content.trim()) throw new DomainError("InvalidPromptError", "invalid_prompt", "Version content cannot be blank");
+    const n = this.versions.length + 1; this.versions.push({ n, content });
+    this.emit("PromptVersionAdded", "version_added", `v${n}`);
+    if (activate) this.activateVersion(n);
+    return n;
+  },
+  activateVersion(n) {
+    this.guardDeleted("activate a version of");
+    if (n < 1 || n > this.versions.length) throw new DomainError("VersionNotFoundError", "version_not_found", `Version ${n} does not exist in this prompt`);
+    if (n === this.active) return false;
+    const prev = this.active; this.active = n; this.emit("PromptVersionActivated", "version_activated", `v${prev} → v${n}`); return true;
+  },
+  deactivate() { this.guardDeleted("deactivate"); this.transition("INACTIVE"); this.emit("PromptDeactivated", "deactivated"); },
+  reactivate() { this.guardDeleted("reactivate"); this.transition("ACTIVE"); this.emit("PromptReactivated", "reactivated"); },
+  delete() { const prev = this.status; this.transition("DELETED"); this.before = prev; this.deletedAt = true; this.emit("PromptDeleted", "deleted", `was ${prev}`); },
+  restore() {
+    if (this.status !== "DELETED") throw new DomainError("PromptNotDeletedError", "prompt_not_deleted", "Cannot restore a prompt that is not deleted");
+    const target = this.before || "INACTIVE"; this.transition(target); this.before = null; this.deletedAt = false; this.emit("PromptRestored", "restored", `back to ${target}`);
+  },
+  diff(a, b) {
+    if (a === b) throw new DomainError("InvalidVersionComparisonError", "invalid_version_comparison", `Cannot compare version ${a} with itself`);
+    const get = n => { if (n < 1 || n > this.versions.length) throw new DomainError("VersionNotFoundError", "version_not_found", `Version ${n} does not exist in this prompt`); return this.versions[n - 1].content; };
+    return lineDiff(get(a), get(b));
+  },
+};
+/* a port of difflib.SequenceMatcher + LineDiffStrategy */
+function lineDiff(oldT, newT) {
+  const split = t => { const l = t.split(/\r?\n/); if (l.length && l[l.length - 1] === "") l.pop(); return l; };
+  const A = split(oldT), B = split(newT), b2j = new Map();
+  B.forEach((x, j) => { if (!b2j.has(x)) b2j.set(x, []); b2j.get(x).push(j); });
+  const longest = (alo, ahi, blo, bhi) => {
+    let bi = alo, bj = blo, bs = 0, j2 = {};
+    for (let i = alo; i < ahi; i++) { const n2 = {}; for (const j of (b2j.get(A[i]) || [])) { if (j < blo) continue; if (j >= bhi) break; const k = (j2[j - 1] || 0) + 1; n2[j] = k; if (k > bs) { bi = i - k + 1; bj = j - k + 1; bs = k; } } j2 = n2; }
+    return [bi, bj, bs];
+  };
+  const q = [[0, A.length, 0, B.length]], blocks = [];
+  while (q.length) { const [alo, ahi, blo, bhi] = q.pop(); const [i, j, k] = longest(alo, ahi, blo, bhi); if (k) { blocks.push([i, j, k]); if (alo < i && blo < j) q.push([alo, i, blo, j]); if (i + k < ahi && j + k < bhi) q.push([i + k, ahi, j + k, bhi]); } }
+  blocks.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  const out = []; let i = 0, j = 0;
+  for (const [ai, bj, size] of [...blocks, [A.length, B.length, 0]]) {
+    const tag = i < ai && j < bj ? "replace" : i < ai ? "delete" : j < bj ? "insert" : "";
+    if (tag) {
+      const paired = tag === "replace" ? Math.min(ai - i, bj - j) : 0;
+      for (let o = 0; o < paired; o++) out.push({ t: "modified", ol: i + o + 1, nl: j + o + 1, ot: A[i + o], nt: B[j + o] });
+      for (let x = i + paired; x < ai; x++) out.push({ t: "removed", ol: x + 1, nl: null, ot: A[x], nt: null });
+      for (let y = j + paired; y < bj; y++) out.push({ t: "added", ol: null, nl: y + 1, ot: null, nt: B[y] });
+    }
+    for (let o = 0; o < size; o++) out.push({ t: "unchanged", ol: ai + o + 1, nl: bj + o + 1, ot: A[ai + o], nt: B[bj + o] });
+    i = ai + size; j = bj + size;
+  }
+  return out;
+}
+/* what the core's contract does with a MODIFIED entry: a removed line plus an added line */
+function contractLines(d) { return d.flatMap(x => x.t === "modified" ? [{ k: "removed", c: x.ot, b: x.ol, a: null }, { k: "added", c: x.nt, b: null, a: x.nl }] : [{ k: x.t, c: x.t === "added" ? x.nt : x.ot, b: x.ol, a: x.nl }]); }
+function stateSVG() {
+  const box = (id, x, y, w, h, k, t, sub) => `<g><rect class="st-box l-${k}" id="st-${id}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" stroke-width="1.6"/><text class="svt-b" x="${x + w / 2}" y="${y + h / 2 - 1}" text-anchor="middle">${t}</text><text class="svt-s" x="${x + w / 2}" y="${y + h / 2 + 14}" text-anchor="middle">${sub}</text></g>`;
+  const tr = (id, d, dash) => `<path class="tr" id="tr-${id}" d="${d}" marker-end="url(#sah)" ${dash ? 'stroke-dasharray="5 4"' : ""}/>`;
+  $("#svg-state").innerHTML = `
+    <defs><marker id="sah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
+    ${tr("deactivate", "M164 40H356")}${tr("reactivate", "M356 58H164")}
+    ${tr("deleteA", "M52 74L190 130")}${tr("deleteI", "M468 74L330 130")}
+    ${tr("restoreA", "M212 112L136 76", true)}${tr("restoreI", "M308 112L384 76", true)}
+    <text class="trl" id="tl-deactivate" x="260" y="34" text-anchor="middle">deactivate()</text><text class="trl" id="tl-reactivate" x="260" y="74" text-anchor="middle">reactivate()</text>
+    <text class="trl" id="tl-deleteA" x="86" y="116" text-anchor="end">delete()</text><text class="trl" id="tl-deleteI" x="434" y="116">delete()</text>
+    <text class="trl" id="tl-restoreA" x="186" y="100">restore()</text><text class="trl" id="tl-restoreI" x="334" y="100" text-anchor="end">restore()</text>
+    ${box("A", 20, 24, 144, 50, "port", "ACTIVE", "in use")}${box("I", 356, 24, 144, 50, "app", "INACTIVE", "switched off")}${box("D", 190, 112, 140, 46, "domain", "DELETED", "soft delete")}`;
+}
+let simShown = { v: 0 };
+function simRender() {
+  const S = Sim, key = { ACTIVE: "A", INACTIVE: "I", DELETED: "D" }[S.status];
+  ["A", "I", "D"].forEach(k => $("#st-" + k).classList.toggle("cur", k === key));
+  const can = { deactivate: key === "A", reactivate: key === "I", deleteA: key === "A", deleteI: key === "I", restoreA: key === "D" && (S.before || "INACTIVE") === "ACTIVE", restoreI: key === "D" && (S.before || "INACTIVE") === "INACTIVE" };
+  Object.keys(can).forEach(k => { $("#tr-" + k).classList.toggle("can", can[k]); $("#tl-" + k).classList.toggle("can", can[k]); });
+  const grew = S.versions.length > simShown.v; simShown.v = S.versions.length;
+  $("#sim-versions").innerHTML = S.versions.map(v => `<button class="vcard ${v.n === S.active ? "act" : ""} ${grew && v.n === S.versions.length ? "new" : ""}" type="button" data-n="${v.n}" aria-label="Activate version ${v.n}">
+    <div class="vn"><span>v${v.n}</span>${v.n === S.active ? '<span class="badge b-port">ACTIVE</span>' : ""}</div><pre>${esc(v.content)}</pre></button>`).join("");
+  const sel = n => S.versions.map(v => `<option value="${v.n}" ${v.n === n ? "selected" : ""}>v${v.n}</option>`).join("");
+  const ca = +$("#cmp-a").value || 1, kept = +$("#cmp-b").value, cb = kept && kept !== ca ? kept : S.versions.length;
+  $("#cmp-a").innerHTML = sel(ca); $("#cmp-b").innerHTML = sel(cb);
+  $("#insp-sim").innerHTML = `
+    <div class="insp-h"><span class="badge b-domain">Prompt</span><h2>Internal state</h2></div>
+    <dl class="kv">
+      <dt>status</dt><dd>${S.status}</dd><dt>active version</dt><dd>${S.active === null ? "none" : "v" + S.active}</dd>
+      <dt>versions</dt><dd>${S.versions.length} (never shrinks)</dd><dt>status_before_deletion</dt><dd>${S.before || "None"}</dd>
+      <dt>deleted_at</dt><dd>${S.deletedAt ? "set" : "None"}</dd>
+      <dt>in use (is_in_use)</dt><dd>${S.status === "ACTIVE" && S.active !== null ? "yes" : "no"}</dd></dl>
+    <h3>Recorded events (most recent first)</h3>
+    <ul class="evlog">${S.events.map(e => `<li><b>${e.name}</b> ${e.extra ? `<span>${esc(e.extra)}</span>` : ""}<br><span>→ prompt.events.${e.subj}</span></li>`).join("")}</ul>
+    <h3>How to read it</h3><p>In the real system, the use case calls <code>pull_events()</code> after the commit and the adapter publishes each event on NATS.</p>`;
+}
+function simInit() {
+  stateSVG(); Sim.reset();
+  const acts = [
+    ["New version", "add_version(activate=False)", () => Sim.addVersion($("#sim-content").value, false)],
+    ["Change content", "add_version(activate=True)", () => Sim.addVersion($("#sim-content").value, true)],
+    ["Deactivate", "deactivate()", () => Sim.deactivate()], ["Reactivate", "reactivate()", () => Sim.reactivate()],
+    ["Delete", "delete()", () => Sim.delete()], ["Restore", "restore()", () => Sim.restore()],
+  ];
+  const box = $("#sim-actions");
+  acts.forEach(([label, call, fn]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.innerHTML = `${label} <small>${call}</small>`;
+    b.addEventListener("click", () => run(label, call, fn)); box.append(b);
+  });
+  const reset = document.createElement("button"); reset.type = "button"; reset.className = "btn"; reset.textContent = "↺ New prompt";
+  reset.addEventListener("click", () => { Sim.reset(); simShown.v = 0; $("#cmp-out").innerHTML = ""; setResult("ok", "New prompt created: ACTIVE, with version 1 active.", "event PromptCreated"); simRender(); }); box.append(reset);
+  const setResult = (cls, html, mono) => { const r = $("#sim-result"); r.className = "result " + cls; r.innerHTML = html + (mono ? `<span class="mono">${esc(mono)}</span>` : ""); };
+  function run(label, call, fn) {
+    try {
+      const before = Sim.events.length; fn();
+      const made = Sim.events.slice(0, Sim.events.length - before).map(e => e.name);
+      setResult("ok", `<b>${esc(label)}</b>: ${made.length ? "ok. Events: " + made.reverse().join(", ") + "." : "ok, but nothing changed (it was already the active version)."}`, `{"ok": true, "correlation_id": "...", "data": ...}`);
+    } catch (e) {
+      if (!(e instanceof DomainError)) throw e;
+      setResult("err", `<b>${esc(label)}</b> failed with <b>${e.pyName}</b>: ${esc(e.message)}`, `{"ok": false, "error": {"code": "${e.code}", "message": "${e.message}"}}`);
+    }
+    simRender();
+  }
+  $("#sim-versions").addEventListener("click", e => { const c = e.target.closest("[data-n]"); if (c) run(`Activate v${c.dataset.n}`, "", () => Sim.activateVersion(+c.dataset.n)); });
+  $("#cmp-go").addEventListener("click", () => {
+    const out = $("#cmp-out");
+    try {
+      const d = Sim.diff(+$("#cmp-a").value, +$("#cmp-b").value);
+      const n = t => d.filter(x => x.t === t).length;
+      const lines = contractLines(d);
+      out.innerHTML = `<div class="chips" style="margin-bottom:8px"><span class="chip">${n("added")} added</span><span class="chip">${n("removed")} removed</span><span class="chip">${n("modified")} modified</span><span class="chip">has_changes: ${d.some(x => x.t !== "unchanged")}</span></div>
+        <div class="scroll"><table class="diff"><thead><tr><th>kind</th><th>old</th><th>new</th><th>old text</th><th>new text</th></tr></thead><tbody>${d.map(x => `<tr><td class="dt ${x.t}">${x.t}</td><td>${x.ol ?? "·"}</td><td>${x.nl ?? "·"}</td><td>${x.ot === null ? "·" : esc(x.ot)}</td><td>${x.nt === null ? "·" : esc(x.nt)}</td></tr>`).join("")}</tbody></table></div>
+        <h3 style="margin:14px 0 6px;font-size:.9rem">The same diff as the core sends it (the contract)</h3>
+        <p class="svt-s" style="font:400 .82rem var(--font);color:var(--muted);margin:0 0 6px">A <i>modified</i> line becomes a <i>removed</i> line plus an <i>added</i> line, like a unified diff. The api forwards this and the front end draws it.</p>
+        <div class="scroll"><table class="diff"><thead><tr><th>kind</th><th>line_number_before</th><th>line_number_after</th><th>content</th></tr></thead><tbody>${lines.map(x => `<tr><td class="dt ${x.k}">${x.k}</td><td>${x.b ?? "·"}</td><td>${x.a ?? "·"}</td><td>${esc(x.c)}</td></tr>`).join("")}</tbody></table></div>`;
+    } catch (e) {
+      if (!(e instanceof DomainError)) throw e;
+      out.innerHTML = `<div class="result err"><b>${e.pyName}</b>: ${esc(e.message)}<span class="mono">{"ok": false, "error": {"code": "${e.code}", ...}}</span></div>`;
+    }
+  });
+  setResult("", "Waiting for an action. Try <b>Restore</b> now: the prompt is active, so the domain should refuse.");
+  simRender();
+}
+
+/* ---------------------------------------------------------------- 7. subjects and routes */
+const SUBJECTS = [
+  { s: "prompt.create", k: "command", uc: "CreatePrompt", call: "Prompt.create(name, content)", ret: "PromptResponse (with content)", ev: ["created"], p: '{"name":"greeting","content":"Hello\\nworld"}', need: false, errs: ["invalid_prompt: blank name or content"], route: "POST /prompts", body: '{"name":"greeting","content":"Hello\\nworld"}', screen: "The \"+\" button: create modal" },
+  { s: "prompt.version.create", k: "command", uc: "CreateVersion", call: "prompt.add_version(content, activate=…)", ret: "PromptVersionResponse (is_active is false unless activate was sent)", ev: ["version_added", "version_activated (if activate)"], p: '{"prompt_id":"<ID>","content":"Hi\\nworld","activate":false}', need: true, errs: ["prompt_deleted", "invalid_prompt: blank content"], route: "POST /prompts/{id}/versions", body: '{"content":"Hi\\nworld"}', screen: "Details modal: Save without activating" },
+  { s: "prompt.content.update", k: "command", uc: "UpdateContent", call: "prompt.add_version(content, activate=True)", ret: "PromptVersionResponse (is_active true)", ev: ["version_added", "version_activated"], p: '{"prompt_id":"<ID>","content":"Hey\\nworld\\nend"}', need: true, errs: ["prompt_deleted", "invalid_prompt: blank content"], route: "PUT /prompts/{id}/content", body: '{"content":"Hey\\nworld\\nend"}', screen: "Details modal: Save and activate" },
+  { s: "prompt.version.activate", k: "command", uc: "ActivateVersion", call: "prompt.activate_version(n)", ret: "PromptResponse (the new active_version_id)", ev: ["version_activated (if it changed)"], p: '{"prompt_id":"<ID>","version_number":1}', need: true, errs: ["version_not_found", "prompt_deleted"], route: "POST /prompts/{id}/activate", body: '{"version_number":1}', screen: "Timeline: Activate this version" },
+  { s: "prompt.delete", k: "command", uc: "DeletePrompt", call: "prompt.delete()", ret: "PromptResponse (status deleted)", ev: ["deleted"], p: '{"prompt_id":"<ID>"}', need: true, errs: ["domain_error: already deleted (invalid transition)"], route: "DELETE /prompts/{id}", body: "", screen: "Details modal: Delete" },
+  { s: "prompt.restore", k: "command", uc: "RestorePrompt", call: "prompt.restore()", ret: "PromptResponse (back to its previous status)", ev: ["restored"], p: '{"prompt_id":"<ID>"}', need: true, errs: ["prompt_not_deleted"], route: "POST /prompts/{id}/recover", body: "", screen: "Trash: Recover" },
+  { s: "prompt.get", k: "query", uc: "GetPrompt", call: "repository → get(id)", ret: "PromptDetailResponse (the prompt with all its versions)", ev: [], p: '{"prompt_id":"<ID>"}', need: true, errs: [], route: "GET /prompts/{id}", body: "", screen: "Cards (preview), compare (version selectors)" },
+  { s: "prompt.versions.list", k: "query", uc: "ListVersions", call: "prompt.versions", ret: "an array of PromptVersionResponse", ev: [], p: '{"prompt_id":"<ID>"}', need: true, errs: [], route: "GET /prompts/{id}/versions", body: "", screen: "Timeline" },
+  { s: "prompt.list.active", k: "query", uc: "ListActivePrompts", call: "repository → list_active()", ret: "an array of PromptResponse", ev: [], p: "{}", need: false, errs: [], route: "GET /prompts/active", body: "", screen: "The prompt list" },
+  { s: "prompt.list.deleted", k: "query", uc: "ListDeletedPrompts", call: "repository → list_deleted()", ret: "an array of PromptResponse", ev: [], p: "{}", need: false, errs: [], route: "GET /prompts/deleted", body: "", screen: "Trash" },
+  { s: "prompt.versions.compare", k: "query", uc: "CompareVersions", call: "prompt.diff(a, b, strategy)", ret: "VersionDiffResponse (lines: added / removed / unchanged)", ev: [], p: '{"prompt_id":"<ID>","from_version":1,"to_version":3}', need: true, errs: ["invalid_version_comparison: same version", "version_not_found"], route: "POST /prompts/{id}/compare", body: '{"from_version":1,"to_version":3}', screen: "Compare screen" },
+];
+const SUBS = { f: "all", sel: "prompt.create" };
+async function copyText(text, btn) {
+  const done = ok => { const old = btn.textContent; btn.textContent = ok ? "Copied" : "Select and copy (Ctrl+C)"; setTimeout(() => btn.textContent = old, 1600); };
+  try { await navigator.clipboard.writeText(text); done(true); }
+  catch { const pre = btn.closest(".insp").querySelector("pre.code"); const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); done(false); }
+}
+function subInspector() {
+  const x = SUBJECTS.find(v => v.s === SUBS.sel);
+  const cmd = `nats request ${x.s} '${x.p}' --raw`;
+  const verb = x.route.split(" ")[0], path = x.route.split(" ")[1].replace("{id}", "<ID>");
+  const curl = `curl -s -X ${verb} localhost:8000${path}` + (x.body ? ` \\\n  -H 'Content-Type: application/json' -d '${x.body}'` : "");
+  const codes = ["invalid_payload (bad JSON, missing field, malformed UUID)"].concat(x.need ? ["not_found (the prompt does not exist)"] : [], x.errs, ["timeout", "internal_error"]);
+  $("#insp-sub").innerHTML = `
+    <div class="insp-h"><span class="badge ${x.k === "command" ? "b-domain" : "b-port"}">${x.k}</span><h2 class="mono" style="font-size:.95rem">${x.s}</h2></div>
+    <p>${x.k === "command" ? "Asynchronous: it runs without waiting. If the message carries a reply address, it also answers. If it fails with no reply address, the error goes to <code>prompt.errors</code>." : "Request and reply: whoever asks waits. Without a reply address, the message is ignored."}</p>
+    <h3>Chain</h3><ul><li>front: ${esc(x.screen)}</li><li>api: <code>${esc(x.route)}</code></li><li>adapter: <code>${x.s}</code></li><li>app: <b>${x.uc}</b>UseCase</li><li>${x.k === "command" ? "domain" : "domain / port"}: <code>${esc(x.call)}</code></li></ul>
+    <h3>Returns in <code>data</code></h3><p>${esc(x.ret)}</p>
+    <h3>Events published</h3>${x.ev.length ? `<div class="chips">${x.ev.map(e => `<span class="chip mono">prompt.events.${esc(e)}</span>`).join("")}</div>` : "<p>None: queries change nothing.</p>"}
+    <h3>Possible errors (core <code>error.code</code>)</h3><ul>${codes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+    <h3>Try it on NATS</h3><pre class="code">${esc(cmd)}</pre>
+    <h3>Try it over HTTP</h3><pre class="code">${esc(curl)}</pre>
+    <div class="row"><button class="btn" id="sub-copy" type="button">Copy NATS command</button><span class="svt-s" style="font:400 .8rem var(--font);color:var(--muted)">${x.need ? "Replace &lt;ID&gt; with the id of a created prompt." : "No id needed."}</span></div>`;
+  $("#sub-copy").onclick = e => copyText(cmd, e.currentTarget);
+}
+function subRender() {
+  $("#sub-filters").innerHTML = [["all", "All"], ["command", "Commands"], ["query", "Queries"]].map(([k, l]) => `<button class="fbtn" type="button" data-f="${k}" aria-pressed="${SUBS.f === k}">${l}</button>`).join("");
+  $("#sub-rows").innerHTML = SUBJECTS.filter(x => SUBS.f === "all" || x.k === SUBS.f).map(x => `
+    <button class="map-row ${x.k} ${x.s === SUBS.sel ? "sel" : ""}" type="button" data-s="${x.s}">
+      <div class="mono">${x.s}<span class="sub">${x.k} · ${esc(x.route)}${x.need ? " · needs a prompt id" : ""}</span></div>
+      <div><b>${x.uc}</b>UseCase<span class="sub">${x.k === "command" ? "writes" : "only reads"}</span></div>
+      <div class="mono">${esc(x.call)}<span class="sub">→ ${esc(x.ret)}</span></div></button>`).join("");
+  subInspector();
+}
+function subInit() {
+  subRender();
+  $("#sub-filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b) { SUBS.f = b.dataset.f; subRender(); } });
+  $("#sub-rows").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) { SUBS.sel = b.dataset.s; subRender(); } });
+}
+
+/* ---------------------------------------------------------------- 8. errors */
+const ERRS = [
+  { from: "api", title: "Invalid UUID or body", core: "(never reaches the core)", exc: "InvalidRequestException", code: "INVALID_REQUEST", http: 422, path: "FastAPI validates the path and the Pydantic body and raises RequestValidationError; the validation handler renders the standard JSON with details.fields.", user: "A toast with the validation message. The core never hears about it.", reproduce: "curl -s localhost:8000/prompts/not-a-uuid" },
+  { from: "core", title: "Malformed payload", core: "invalid_payload", exc: "InvalidRequestException", code: "INVALID_REQUEST", http: 422, path: "The core's handler cannot read the message (bad JSON, missing field, malformed UUID).", user: "A toast with the message.", reproduce: "nats request prompt.get '{\"prompt_id\":\"nope\"}' --raw" },
+  { from: "core", title: "Unknown prompt", core: "not_found", exc: "PromptNotFoundException", code: "PROMPT_NOT_FOUND", http: 404, path: "require_prompt in the app layer raises PromptNotFoundError; the adapter maps it to not_found.", user: "A toast: \"Prompt <id> não encontrado\".", reproduce: "curl -s localhost:8000/prompts/00000000-0000-0000-0000-000000000000" },
+  { from: "core", title: "Unknown version", core: "version_not_found", exc: "VersionNotFoundException", code: "VERSION_NOT_FOUND", http: 404, path: "Prompt.get_version raises VersionNotFoundError (activating or comparing a version that does not exist).", user: "A toast.", reproduce: "curl -s -X POST localhost:8000/prompts/<ID>/activate -H 'Content-Type: application/json' -d '{\"version_number\":99}'" },
+  { from: "core", title: "Comparing a version with itself", core: "invalid_version_comparison", exc: "InvalidVersionComparisonException", code: "INVALID_VERSION_COMPARISON", http: 422, path: "Prompt.diff refuses two equal numbers. (The compare screen also blocks it before calling.)", user: "A toast, if it ever got that far.", reproduce: "curl -s -X POST localhost:8000/prompts/<ID>/compare -H 'Content-Type: application/json' -d '{\"from_version\":1,\"to_version\":1}'" },
+  { from: "core", title: "Operation on a deleted prompt", core: "prompt_deleted", exc: "PromptAlreadyDeletedException", code: "PROMPT_ALREADY_DELETED", http: 409, path: "_ensure_not_deleted raises PromptDeletedError (adding or activating a version of a deleted prompt).", user: "A toast; the screen keeps working.", reproduce: "delete a prompt, then PUT /prompts/<ID>/content" },
+  { from: "core", title: "Restoring a prompt that is not deleted", core: "prompt_not_deleted", exc: "PromptNotDeletedException", code: "PROMPT_NOT_DELETED", http: 409, path: "restore() raises PromptNotDeletedError.", user: "A toast.", reproduce: "curl -s -X POST localhost:8000/prompts/<ID>/recover" },
+  { from: "core", title: "Invalid prompt data", core: "invalid_prompt", exc: "DomainRuleException", code: "DOMAIN_RULE_VIOLATION", http: 409, path: "InvalidPromptError: blank name or blank content.", user: "A toast.", reproduce: "curl -s -X POST localhost:8000/prompts -H 'Content-Type: application/json' -d '{\"name\":\"   \",\"content\":\"x\"}'" },
+  { from: "core", title: "Any other business rule", core: "domain_error", exc: "DomainRuleException (the api first tries to recognise the message text, as a fallback)", code: "DOMAIN_RULE_VIOLATION", http: 409, path: "A DomainError with no dedicated code, such as an invalid state transition.", user: "A toast.", reproduce: "delete the same prompt twice" },
+  { from: "core", title: "The core timed out", core: "timeout", exc: "CoreTimeoutException", code: "CORE_TIMEOUT", http: 504, path: "asyncio.wait_for in the core's server exceeded HANDLER_TIMEOUT_SECONDS.", user: "A toast: the internal service took too long.", reproduce: "HANDLER_TIMEOUT_SECONDS=0.0001 uv run src/main.py" },
+  { from: "core", title: "Unexpected core error", core: "internal_error", exc: "CoreResponseException", code: "CORE_RESPONSE_ERROR", http: 502, path: "An unforeseen exception in the core; the details stay in the core's log.", user: "A toast.", reproduce: "(none: it is the safety net)" },
+  { from: "api", title: "No answer from the core within 3 s", core: "(no reply)", exc: "CoreTimeoutException", code: "CORE_TIMEOUT", http: 504, path: "NATSPublisher.request raises NATSTimeoutError.", user: "A toast.", reproduce: "start the api with a stopped-but-subscribed core, or a very slow one" },
+  { from: "api", title: "The core is not running", core: "(no responders)", exc: "CoreUnavailableException", code: "CORE_UNAVAILABLE", http: 503, path: "Nobody is subscribed to the subject: NATS answers NoRespondersError.", user: "A toast: the internal service is unavailable.", reproduce: "stop the core, then call any route" },
+  { from: "api", title: "Publishing to NATS failed", core: "(connection error)", exc: "NATSPublishException", code: "NATS_PUBLISH_FAILED", http: 503, path: "A NATS or OS error while sending.", user: "A toast.", reproduce: "stop NATS while the api is running" },
+  { from: "api", title: "The core replied nonsense", core: "(bad envelope)", exc: "CoreResponseException", code: "CORE_RESPONSE_ERROR", http: 502, path: "The reply is not JSON, or does not match ApiWrapper (no ok field).", user: "A toast.", reproduce: "(none: protocol violation)" },
+  { from: "api", title: "An unforeseen bug", core: "(any)", exc: "the generic handler", code: "INTERNAL_SERVER_ERROR", http: 500, path: "Any exception that is not a BaseAppException; the traceback is logged, never sent.", user: "A toast: internal server error.", reproduce: "(none)" },
+];
+const ERR = { f: "all", sel: 0 };
+function errInspector() {
+  const e = ERRS[ERR.sel];
+  const json = JSON.stringify({ error: { code: e.code, message: "<text for people>", details: {} } }, null, 2);
+  $("#insp-err").innerHTML = `
+    <div class="insp-h"><span class="badge ${e.from === "core" ? "b-core" : "b-api"}">${e.from === "core" ? "starts in the core" : "starts in the api"}</span><h2>${esc(e.title)}</h2></div>
+    <p>${esc(e.path)}</p>
+    <h3>The path</h3>
+    <ul><li>Core code: <code>${esc(e.core)}</code></li><li>Api exception: <code>${esc(e.exc)}</code></li><li>HTTP: <b>${e.http}</b> <code>${e.code}</code></li><li>In the browser: ${esc(e.user)}</li></ul>
+    <h3>What the client receives</h3><pre class="code">HTTP ${e.http}\n${esc(json)}</pre>
+    <h3>Reproduce it</h3><pre class="code">${esc(e.reproduce)}</pre>`;
+}
+function errRender() {
+  $("#err-filters").innerHTML = [["all", "All"], ["core", "Starts in the core"], ["api", "Starts in the api"]].map(([k, l]) => `<button class="fbtn" type="button" data-f="${k}" aria-pressed="${ERR.f === k}">${l}</button>`).join("");
+  $("#err-rows").innerHTML = ERRS.map((e, i) => ({ e, i })).filter(({ e }) => ERR.f === "all" || e.from === ERR.f).map(({ e, i }) => `
+    <button class="map-row ${e.http >= 500 ? "command" : "query"} ${i === ERR.sel ? "sel" : ""}" type="button" data-i="${i}" style="grid-template-columns:1.3fr 1.1fr .5fr">
+      <div><b>${esc(e.title)}</b><span class="sub">core: ${esc(e.core)}</span></div>
+      <div class="mono">${esc(e.code)}<span class="sub">${esc(e.exc.split(" (")[0])}</span></div>
+      <div class="mono"><b>${e.http}</b></div></button>`).join("");
+  errInspector();
+}
+function errInit() {
+  errRender();
+  $("#err-filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b) { ERR.f = b.dataset.f; errRender(); } });
+  $("#err-rows").addEventListener("click", e => { const b = e.target.closest("[data-i]"); if (b) { ERR.sel = +b.dataset.i; errRender(); } });
+}
+
+/* ---------------------------------------------------------------- 9. wiring (main.py) */
+const WN = {
+  settings: [10, 20, 130, 46, "infra", "Settings", "from_env()"], engine: [10, 100, 130, 46, "infra", "engine", "SQLite + WAL"], sf: [170, 100, 150, 46, "infra", "session_factory", "async_sessionmaker"],
+  nats: [10, 190, 130, 46, "infra", "NatsClient", "connect()"], pub: [170, 190, 150, 46, "adapter", "NatsEventPublisher", "EventPublisher"],
+  lock: [350, 100, 130, 46, "adapter", "write_lock", "asyncio.Lock"], reader: [350, 20, 150, 46, "adapter", "reader", "SessionPerCall…Repo"], strat: [350, 262, 130, 46, "domain", "LineDiffStrategy", "DiffStrategy"],
+  fac: [530, 100, 150, 66, "app", "UseCaseFactories", "11 lambdas, 1 per use case"], mad: [530, 276, 150, 46, "adapter", "MessagingAdapter", "subscribe × 11"],
+  routes: [530, 196, 150, 44, "adapter", "build_routes()", "subject → handler"],
+};
+const WE = [["settings", "engine"], ["engine", "sf"], ["sf", "reader"], ["sf", "lock"], ["nats", "pub"], ["lock", "fac"], ["pub", "fac"], ["reader", "fac"], ["strat", "fac"], ["fac", "routes"], ["routes", "mad"], ["nats", "mad"]];
+const WSTEPS = [
+  { t: "Logging and settings", nodes: ["settings"], code: `settings = Settings.from_env()\nconfigure_logging(settings.log_level)\nlog = get_logger("main")`, why: "First of all, so that everything that comes next gets recorded. The environment variables (NATS_URL, DATABASE_URL, LOG_LEVEL, HANDLER_TIMEOUT_SECONDS) are read here, with default values." },
+  { t: "SQLite engine and tables", nodes: ["engine", "sf"], code: `engine = create_engine(settings.database_url)\nawait init_db(engine)\nsession_factory = create_session_factory(engine)`, why: "The database must exist before the first message. The engine applies WAL, foreign_keys and busy_timeout, and the factory makes one session per use case." },
+  { t: "Connection to NATS", nodes: ["nats"], code: `nats_client = NatsClient(settings)\nawait nats_client.connect()`, why: "If the connection fails, the program logs the error (nats_connection_failed), releases the database and exits with code 1." },
+  { t: "Shared pieces", nodes: ["pub", "lock", "reader", "strat"], code: `publisher = NatsEventPublisher(nats_client)\nwrite_lock = asyncio.Lock()\nreader = SessionPerCallPromptRepository(session_factory)\ndiff_strategy = LineDiffStrategy()`, why: "These four pieces are shared by every message: the event publisher, the single write key, the read repository and the diff algorithm." },
+  { t: "Use case factories", nodes: ["fac"], code: `def uow() -> SqlAlchemyUnitOfWork:\n    return SqlAlchemyUnitOfWork(session_factory, write_lock)\n\nfactories = UseCaseFactories(\n    create_prompt=lambda: CreatePromptUseCase(uow(), publisher),\n    ...\n    compare_versions=lambda: CompareVersionsUseCase(reader, diff_strategy),\n)`, why: "One lambda per use case. Each message gets a new use case, with its own Unit of Work and therefore its own database session; a session cannot be shared by simultaneous messages." },
+  { t: "Start the adapter", nodes: ["routes", "mad"], code: `adapter = MessagingAdapter(\n    nats_client, build_routes(factories), settings.handler_timeout_seconds\n)\nawait adapter.start()`, why: "From here on the service answers: 11 subjects subscribed, each tied to its handler by a Route." },
+  { t: "Wait and shut down cleanly", nodes: [], teardown: true, code: `await stop.wait()          # SIGINT or SIGTERM\nawait adapter.stop()       # cancels the subscriptions\nawait nats_client.close()  # drain: finishes what is in flight\nawait engine.dispose()`, why: "On shutdown the order is reversed: from the edge inwards. First stop receiving, then finish what is in progress, then close the connections." },
+];
+const WIRE = { i: 0 };
+function wireInit() {
+  const nodeSVG = Object.entries(WN).map(([k, [x, y, w, h, l, t, s]]) => `<g class="wnode hid" data-n="${k}"><rect class="l-${l}" x="${x}" y="${y}" width="${w}" height="${h}" rx="8" stroke-width="1.6"/><text class="svt-b" x="${x + w / 2}" y="${y + h / 2 - 2}" text-anchor="middle" style="font-size:12px">${t}</text><text class="svt-s" x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle">${s}</text></g>`).join("");
+  const cx = (k, side) => { const [x, y, w, h] = WN[k]; return side === "r" ? [x + w, y + h / 2] : side === "l" ? [x, y + h / 2] : side === "t" ? [x + w / 2, y] : [x + w / 2, y + h]; };
+  const edgeSVG = WE.map(([a, b]) => {
+    const A = WN[a], B = WN[b]; let p1, p2;
+    if (Math.abs(A[1] - B[1]) < 40 || B[0] > A[0] + A[2] - 1) { p1 = cx(a, "r"); p2 = cx(b, "l"); } else if (B[1] > A[1]) { p1 = cx(a, "b"); p2 = cx(b, "t"); } else { p1 = cx(a, "t"); p2 = cx(b, "b"); }
+    if (a === "settings" && b === "engine") { p1 = cx(a, "b"); p2 = cx(b, "t"); }
+    if (a === "nats" && b === "mad") { return `<path class="wedge hid" data-e="${a}-${b}" d="M140 213H156V340H605V324" marker-end="url(#wah)"/>`; }
+    if (a === "sf" && b === "reader") { return `<path class="wedge hid" data-e="${a}-${b}" d="M320 112L350 50" marker-end="url(#wah)"/>`; }
+    if (a === "sf" && b === "lock") { return `<path class="wedge hid" data-e="${a}-${b}" d="M320 123H348" marker-end="url(#wah)"/>`; }
+    return `<path class="wedge hid" data-e="${a}-${b}" d="M${p1[0]} ${p1[1]}L${p2[0]} ${p2[1]}" marker-end="url(#wah)"/>`;
+  }).join("");
+  $("#svg-wire").innerHTML = `<defs><marker id="wah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
+    ${edgeSVG}${nodeSVG}<text class="svt-s" x="10" y="356">Arrows read as “is handed to”. The colors are the layers'.</text>`;
+  $("#wire-steps").innerHTML = WSTEPS.map((s, i) => `<button class="wstep" type="button" data-i="${i}" aria-pressed="false"><b>${i + 1}</b><span>${s.t}</span></button>`).join("");
+  $("#wire-steps").addEventListener("click", e => { const b = e.target.closest("[data-i]"); if (b) wireGo(+b.dataset.i); });
+  wireGo(0);
+}
+function wireGo(i) {
+  WIRE.i = i;
+  const made = new Set(WSTEPS.slice(0, i + 1).flatMap(s => s.nodes)), fresh = new Set(WSTEPS[i].nodes), all = WSTEPS[i].teardown;
+  $$("#svg-wire .wnode").forEach(n => { const k = n.dataset.n; n.classList.toggle("hid", !(all || made.has(k))); n.classList.toggle("new", fresh.has(k)); });
+  $$("#svg-wire .wedge").forEach(p => { const [a, b] = p.dataset.e.split("-"); p.classList.toggle("hid", !(all || (made.has(a) && made.has(b)))); });
+  $$("#wire-steps .wstep").forEach(b => b.setAttribute("aria-pressed", +b.dataset.i === i));
+  const s = WSTEPS[i];
+  $("#insp-wire").innerHTML = `
+    <div class="insp-h"><span class="badge b-ext">step ${i + 1} of ${WSTEPS.length}</span><h2>${esc(s.t)}</h2></div>
+    <p>${esc(s.why)}</p><h3>In core/src/main.py</h3><pre class="code">${esc(s.code)}</pre>
+    ${s.teardown ? '<div class="note">The graph stays whole on screen because, on shutdown, every piece is taken apart, from the edge inwards.</div>' : ""}
+    <div class="row"><button class="btn" id="wire-prev" type="button" ${i === 0 ? "disabled" : ""}>◀ Previous</button><button class="btn pri" id="wire-next" type="button" ${i === WSTEPS.length - 1 ? "disabled" : ""}>Next ▶</button></div>`;
+  $("#wire-prev").onclick = () => wireGo(i - 1); $("#wire-next").onclick = () => wireGo(i + 1);
+}
+
+/* ---------------------------------------------------------------- boot */
+systemSVG(); layersSVG(); depsInit();
+makeSeq({ svgId: "svg-seq", inspId: "insp-seq", ids: { prev: "seq-prev", next: "seq-next", play: "seq-play", reset: "seq-reset", count: "seq-count" }, PART: CORE_PART, STEPS: CORE_STEPS, label: ORDER });
+makeSeq({ svgId: "svg-e2e", inspId: "insp-e2e", ids: { prev: "e2e-prev", next: "e2e-next", play: "e2e-play", reset: "e2e-reset", count: "e2e-count" }, PART: E2E_PART, STEPS: E2E_STEPS, label: ["front", "api", "nats", "adapter", "domain"] });
+simInit(); subInit(); errInit(); wireInit();
+show(location.hash.slice(1) || "system");
+</script>
+
+</body>
+</html>

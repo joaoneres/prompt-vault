@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Smoke test global do prompt-vault: prova que HTTP -> api -> NATS -> core -> SQLite funciona
-# e que os dois projetos concordam sobre o contrato.
+# Global smoke test of prompt-vault: proves that HTTP -> api -> NATS -> core -> SQLite works
+# and that both projects agree on the contract.
 #
-# O que ele valida além dos smoke tests de cada projeto:
-#   1. os três saltos respondem (NATS, core via NATS, api via HTTP);
-#   2. cada corpo HTTP é válido contra os DTOs da api (api/models/response_models.py);
-#   3. cada query HTTP devolve exatamente o `data` da mesma query feita direto no NATS
-#      (o gateway só transporta);
-#   4. um prompt criado por HTTP é visto no NATS e um criado no NATS é visto por HTTP;
-#   5. criar por HTTP publica o evento de domínio no NATS (prompt.events.created);
-#   6. erros do core chegam ao HTTP com o status e o código padronizados.
+# What it validates on top of each project's own smoke test:
+#   1. the three hops answer (NATS, core via NATS, api via HTTP);
+#   2. every HTTP body is valid against the api DTOs (api/models/response_models.py);
+#   3. every HTTP query returns exactly the `data` of the same query sent straight to NATS
+#      (the gateway only transports);
+#   4. a prompt created over HTTP is seen on NATS and one created on NATS is seen over HTTP;
+#   5. creating over HTTP publishes the domain event on NATS (prompt.events.created);
+#   6. core errors reach HTTP with the standardized status and code.
 #
-# Pré-requisitos (nada é iniciado por este script):
+# Prerequisites (this script starts nothing):
 #   (core) docker compose up -d && uv run src/main.py
-#   (api)  uv run uvicorn main:app          # dentro de api/ (uv sync feito)
+#   (api)  uv run uvicorn main:app          # inside api/ (uv sync done)
 #
-# Uso: ./smoke_test.sh
-# Variáveis: API_URL (http://localhost:8000), NATS_URL (nats://localhost:4222), SMOKE_TIMEOUT (10)
-# Efeito colateral: cria prompts "global-smoke-<id>" no banco do core (ficam deletados no fim).
+# Usage: ./smoke_test.sh
+# Variables: API_URL (http://localhost:8000), NATS_URL (nats://localhost:4222), SMOKE_TIMEOUT (10)
+# Side effect: creates prompts "global-smoke-<id>" in the core database (they end up deleted).
 
 set -uo pipefail
 
@@ -53,7 +53,7 @@ trap cleanup EXIT
 # ------------------------------------------------------------------ helpers
 
 die() {
-  printf '%sErro:%s %s\n' "$RED" "$RESET" "$1" >&2
+  printf '%sError:%s %s\n' "$RED" "$RESET" "$1" >&2
   exit 2
 }
 
@@ -71,15 +71,15 @@ fail() {
   [[ -n "${2:-}" ]] && printf '      %s%s%s\n' "$DIM" "$2" "$RESET"
 }
 
-expect_eq() { # <descrição> <esperado> <obtido>
-  if [[ "$3" == "$2" ]]; then pass "$1"; else fail "$1" "esperado: $2 | obtido: $3"; fi
+expect_eq() { # <description> <expected> <actual>
+  if [[ "$3" == "$2" ]]; then pass "$1"; else fail "$1" "expected: $2 | actual: $3"; fi
 }
 
-expect_contains() { # <descrição> <trecho> <texto>
-  if [[ "$3" == *"$2"* ]]; then pass "$1"; else fail "$1" "não encontrado: $2 | em: $3"; fi
+expect_contains() { # <description> <snippet> <text>
+  if [[ "$3" == *"$2"* ]]; then pass "$1"; else fail "$1" "not found: $2 | in: $3"; fi
 }
 
-# json_get <json> <caminho>: valor no caminho (ex.: data.id, *.id, lines.#). Ausente -> <ausente>.
+# json_get <json> <path>: value at the path (e.g. data.id, *.id, lines.#). Missing -> <missing>.
 json_get() {
   "$API_PY" -I - "$2" "$1" <<'PY'
 import json, sys
@@ -101,7 +101,7 @@ def walk(cur, parts):
 try:
     value = walk(json.loads(raw), [] if path == "" else path.split("."))
 except (ValueError, KeyError, IndexError, TypeError):
-    print("<ausente>")
+    print("<missing>")
     sys.exit(0)
 
 def fmt(v):
@@ -111,7 +111,7 @@ print(" ".join(str(fmt(i)) for i in value) if isinstance(value, list) else fmt(v
 PY
 }
 
-# http <METHOD> <path> [json]  ->  $STATUS e $BODY
+# http <METHOD> <path> [json]  ->  $STATUS and $BODY
 http() {
   local method=$1 path=$2 payload=${3:-}
   local args=(-s -o "$WORKDIR/body" -w '%{http_code}' --max-time "$TIMEOUT" -X "$method" "$API_URL$path")
@@ -120,22 +120,22 @@ http() {
   BODY="$(cat "$WORKDIR/body" 2>/dev/null)"
 }
 
-# nats_req <subject> <json>  ->  envelope do core em $NRESP
+# nats_req <subject> <json>  ->  core envelope in $NRESP
 nats_req() {
-  NRESP="$(nats request "$1" "$2" --timeout "${TIMEOUT}s" --raw 2>/dev/null)" || NRESP="<sem resposta>"
+  NRESP="$(nats request "$1" "$2" --timeout "${TIMEOUT}s" --raw 2>/dev/null)" || NRESP="<no response>"
 }
 
-# O `data` do envelope do core (JSON compacto e ordenado).
+# The `data` of the core envelope (compact, sorted JSON).
 nats_data() {
   "$API_PY" -I -c 'import json,sys; print(json.dumps(json.loads(sys.argv[1])["data"], sort_keys=True))' "$NRESP" 2>/dev/null
 }
 
-# Corpo HTTP normalizado, para comparar com nats_data.
+# Normalized HTTP body, to compare with nats_data.
 http_body_norm() {
   "$API_PY" -I -c 'import json,sys; print(json.dumps(json.loads(sys.argv[1]), sort_keys=True))' "$BODY" 2>/dev/null
 }
 
-# validate <tipo>: valida $BODY contra um DTO da api (ex.: PromptResponse, list[PromptVersionResponse]).
+# validate <type>: validates $BODY against an api DTO (e.g. PromptResponse, list[PromptVersionResponse]).
 validate() {
   local label=$1 spec=$2 out
   out="$("$API_PY" -I - "$API_DIR" "$spec" "$BODY" <<'PY' 2>&1
@@ -151,25 +151,25 @@ except (ValidationError, ValueError) as exc:
     print(str(exc).splitlines()[0:4])
     sys.exit(1)
 PY
-)" && pass "$label -> corpo válido como $spec" || fail "$label -> corpo válido como $spec" "$out | corpo: $BODY"
+)" && pass "$label -> body valid as $spec" || fail "$label -> body valid as $spec" "$out | body: $BODY"
 }
 
-# same_as_core <descrição> <subject> <json>: corpo HTTP atual == data da query direta no NATS.
+# same_as_core <description> <subject> <json>: current HTTP body == data of the same query sent to NATS.
 same_as_core() {
   local label=$1 http_norm
   http_norm="$(http_body_norm)"
   nats_req "$2" "$3"
-  expect_eq "$label -> HTTP idêntico ao data do core no NATS" "$(nats_data)" "$http_norm"
+  expect_eq "$label -> HTTP identical to the core data on NATS" "$(nats_data)" "$http_norm"
 }
 
 expect_ok() { expect_eq "$1 -> HTTP 200" "200" "$STATUS"; }
 
-expect_error() { # <descrição> <status> <código>
+expect_error() { # <description> <status> <code>
   expect_eq "$1 -> HTTP $2" "$2" "$STATUS"
-  expect_eq "$1 -> código $3" "$3" "$(json_get "$BODY" error.code)"
+  expect_eq "$1 -> code $3" "$3" "$(json_get "$BODY" error.code)"
 }
 
-wait_for_text() { # <arquivo> <texto> [tentativas de 0,1s]
+wait_for_text() { # <file> <text> [attempts of 0.1s]
   local file=$1 text=$2 tries=${3:-30}
   for ((i = 0; i < tries; i++)); do
     grep -qF -- "$text" "$file" 2>/dev/null && return 0
@@ -178,55 +178,55 @@ wait_for_text() { # <arquivo> <texto> [tentativas de 0,1s]
   return 1
 }
 
-# ------------------------------------------------------------------ pré-requisitos
+# ------------------------------------------------------------------ prerequisites
 
-command -v curl >/dev/null || die "curl não encontrado no PATH"
-command -v nats >/dev/null || die "NATS CLI não encontrado no PATH"
-[[ -x "$API_PY" ]] || die "venv da api não encontrado ($API_PY). Rode: (cd api && uv sync)"
+command -v curl >/dev/null || die "curl not found in PATH"
+command -v nats >/dev/null || die "NATS CLI not found in PATH"
+[[ -x "$API_PY" ]] || die "api virtualenv not found ($API_PY). Run: (cd api && uv sync)"
 
 nats pub _smoke.ping ping >/dev/null 2>&1 \
-  || die "sem conexão com o NATS em $NATS_URL (cd core && docker compose up -d)"
+  || die "cannot connect to NATS at $NATS_URL (cd core && docker compose up -d)"
 
 nats_req prompt.list.active '{}'
 [[ "$(json_get "$NRESP" ok)" == "true" ]] \
-  || die "o core não respondeu em prompt.list.active (cd core && uv run src/main.py). Resposta: $NRESP"
+  || die "the core did not answer on prompt.list.active (cd core && uv run src/main.py). Response: $NRESP"
 
 http GET /prompts/active
-[[ "$STATUS" == "000" ]] && die "sem conexão com a api em $API_URL (cd api && uv run uvicorn main:app)"
+[[ "$STATUS" == "000" ]] && die "cannot connect to the api at $API_URL (cd api && uv run uvicorn main:app)"
 [[ "$STATUS" == "200" ]] \
-  || die "GET /prompts/active devolveu HTTP $STATUS. Corpo: $BODY"
+  || die "GET /prompts/active returned HTTP $STATUS. Body: $BODY"
 
-printf '%sprompt-vault smoke test global%s  %s(API: %s, NATS: %s, run: %s)%s\n' \
+printf '%sprompt-vault global smoke test%s  %s(API: %s, NATS: %s, run: %s)%s\n' \
   "$BOLD" "$RESET" "$DIM" "$API_URL" "$NATS_URL" "$RUN_ID" "$RESET"
 
 nats sub 'prompt.events.>' >"$EVENTS_LOG" 2>&1 &
 SUB_PID=$!
-wait_for_text "$EVENTS_LOG" "Subscribing on" || die "não consegui assinar prompt.events.>"
+wait_for_text "$EVENTS_LOG" "Subscribing on" || die "could not subscribe to prompt.events.>"
 
 # ------------------------------------------------------------------ conectividade
 
-section "Conectividade (HTTP -> NATS -> core)"
+section "Connectivity (HTTP -> NATS -> core)"
 
-pass "NATS responde em $NATS_URL"
-pass "core responde via NATS (prompt.list.active)"
-pass "api responde via HTTP (GET /prompts/active)"
+pass "NATS answers at $NATS_URL"
+pass "core answers via NATS (prompt.list.active)"
+pass "api answers over HTTP (GET /prompts/active)"
 
 # ------------------------------------------------------------------ fluxo HTTP + contrato
 
-section "Fluxo via HTTP: contrato validado com os DTOs da api"
+section "Flow over HTTP: contract validated with the api DTOs"
 
-http POST /prompts "{\"name\":\"global-smoke-$RUN_ID\",\"content\":\"Ola\\nmundo\"}"
+http POST /prompts "{\"name\":\"global-smoke-$RUN_ID\",\"content\":\"Hello\\nworld\"}"
 expect_ok "POST /prompts"
 validate "POST /prompts" PromptResponse
 PID="$(json_get "$BODY" id)"
-[[ "$PID" =~ ^[0-9a-f-]{36}$ ]] || { fail "POST /prompts -> id" "corpo: $BODY"; die "sem id, não dá para continuar"; }
+[[ "$PID" =~ ^[0-9a-f-]{36}$ ]] || { fail "POST /prompts -> id" "body: $BODY"; die "no id, cannot continue"; }
 V1_ID="$(json_get "$BODY" active_version_id)"
 
-http POST "/prompts/$PID/versions" '{"content":"Oi\nmundo"}'
+http POST "/prompts/$PID/versions" '{"content":"Hi\nworld"}'
 expect_ok "POST /prompts/{id}/versions"
 validate "POST versions" PromptVersionResponse
 
-http PUT "/prompts/$PID/content" '{"content":"E ai\nmundo\nfim"}'
+http PUT "/prompts/$PID/content" '{"content":"Hey\nworld\nend"}'
 expect_ok "PUT /prompts/{id}/content"
 validate "PUT content" PromptVersionResponse
 V3_ID="$(json_get "$BODY" id)"
@@ -234,7 +234,7 @@ V3_ID="$(json_get "$BODY" id)"
 http GET "/prompts/$PID"
 expect_ok "GET /prompts/{id}"
 validate "GET prompt" PromptDetailResponse
-expect_eq "GET prompt -> active_version_id é o da versão 3" "$V3_ID" "$(json_get "$BODY" active_version_id)"
+expect_eq "GET prompt -> active_version_id is the one of version 3" "$V3_ID" "$(json_get "$BODY" active_version_id)"
 same_as_core "GET prompt" prompt.get "{\"prompt_id\":\"$PID\"}"
 
 http GET "/prompts/$PID/versions"
@@ -245,18 +245,18 @@ same_as_core "GET versions" prompt.versions.list "{\"prompt_id\":\"$PID\"}"
 http POST "/prompts/$PID/activate" '{"version_number":1}'
 expect_ok "POST /prompts/{id}/activate"
 validate "POST activate" PromptResponse
-expect_eq "POST activate -> active_version_id é o da versão 1" "$V1_ID" "$(json_get "$BODY" active_version_id)"
+expect_eq "POST activate -> active_version_id is the one of version 1" "$V1_ID" "$(json_get "$BODY" active_version_id)"
 
 http POST "/prompts/$PID/compare" '{"from_version":1,"to_version":3}'
 expect_ok "POST /prompts/{id}/compare"
 validate "POST compare" VersionDiffResponse
-expect_eq "POST compare -> ids das versões" "$V1_ID $V3_ID" "$(json_get "$BODY" version_id_before) $(json_get "$BODY" version_id_after)"
+expect_eq "POST compare -> version ids" "$V1_ID $V3_ID" "$(json_get "$BODY" version_id_before) $(json_get "$BODY" version_id_after)"
 same_as_core "POST compare" prompt.versions.compare "{\"prompt_id\":\"$PID\",\"from_version\":1,\"to_version\":3}"
 
 http GET /prompts/active
 expect_ok "GET /prompts/active"
 validate "GET active" "list[PromptResponse]"
-expect_contains "GET active -> contém o prompt" "$PID" "$(json_get "$BODY" '*.id')"
+expect_contains "GET active -> contains the prompt" "$PID" "$(json_get "$BODY" '*.id')"
 same_as_core "GET active" prompt.list.active '{}'
 
 http DELETE "/prompts/$PID"
@@ -267,7 +267,7 @@ expect_eq "DELETE -> status deleted" "deleted" "$(json_get "$BODY" status)"
 http GET /prompts/deleted
 expect_ok "GET /prompts/deleted"
 validate "GET deleted" "list[PromptResponse]"
-expect_contains "GET deleted -> contém o prompt" "$PID" "$(json_get "$BODY" '*.id')"
+expect_contains "GET deleted -> contains the prompt" "$PID" "$(json_get "$BODY" '*.id')"
 same_as_core "GET deleted" prompt.list.deleted '{}'
 
 http POST "/prompts/$PID/recover"
@@ -277,70 +277,70 @@ expect_eq "POST recover -> status active" "active" "$(json_get "$BODY" status)"
 
 # ------------------------------------------------------------------ os dois lados enxergam o mesmo estado
 
-section "Mesmo estado nos dois lados"
+section "Same state on both sides"
 
 nats_req prompt.get "{\"prompt_id\":\"$PID\"}"
-expect_eq "prompt criado por HTTP existe no core (NATS)" "$PID" "$(json_get "$NRESP" data.id)"
+expect_eq "prompt created over HTTP exists in the core (NATS)" "$PID" "$(json_get "$NRESP" data.id)"
 
 nats_req prompt.create "{\"name\":\"global-smoke-nats-$RUN_ID\",\"content\":\"via nats\"}"
 NATS_PID="$(json_get "$NRESP" data.id)"
-[[ "$NATS_PID" =~ ^[0-9a-f-]{36}$ ]] && pass "prompt criado direto no NATS ($NATS_PID)" \
-  || fail "prompt criado direto no NATS" "resposta: $NRESP"
+[[ "$NATS_PID" =~ ^[0-9a-f-]{36}$ ]] && pass "prompt created straight on NATS ($NATS_PID)" \
+  || fail "prompt created straight on NATS" "response: $NRESP"
 http GET "/prompts/$NATS_PID"
-expect_ok "GET prompt criado no NATS"
-expect_eq "prompt criado no NATS é visível por HTTP" "global-smoke-nats-$RUN_ID" "$(json_get "$BODY" name)"
+expect_ok "GET prompt created on NATS"
+expect_eq "prompt created on NATS is visible over HTTP" "global-smoke-nats-$RUN_ID" "$(json_get "$BODY" name)"
 
-section "Eventos de domínio (prompt.events.>)"
+section "Domain events (prompt.events.>)"
 
 wait_for_text "$EVENTS_LOG" "$PID" || true
 EVENTS="$(cat "$EVENTS_LOG")"
 for name in created version_added version_activated deleted restored; do
-  expect_contains "criar/alterar por HTTP publicou prompt.events.$name" "prompt.events.$name" "$EVENTS"
+  expect_contains "creating/changing over HTTP published prompt.events.$name" "prompt.events.$name" "$EVENTS"
 done
-expect_contains "eventos referenciam o prompt criado por HTTP" "$PID" "$EVENTS"
+expect_contains "events reference the prompt created over HTTP" "$PID" "$EVENTS"
 
 # ------------------------------------------------------------------ erros
 
-section "Erros do core chegam ao HTTP (formato padronizado)"
+section "Core errors reach HTTP (standardized format)"
 
 RANDOM_UUID="$("$API_PY" -I -c 'import uuid; print(uuid.uuid4())')"
 
 http GET "/prompts/$RANDOM_UUID"
-expect_error "prompt inexistente" 404 PROMPT_NOT_FOUND
-expect_eq "erro -> details presente" "{}" "$(json_get "$BODY" error.details)"
+expect_error "unknown prompt" 404 PROMPT_NOT_FOUND
+expect_eq "error -> details present" "{}" "$(json_get "$BODY" error.details)"
 
 http POST "/prompts/$PID/activate" '{"version_number":99}'
-expect_error "versão inexistente" 404 VERSION_NOT_FOUND
+expect_error "unknown version" 404 VERSION_NOT_FOUND
 
 http POST "/prompts/$PID/compare" '{"from_version":2,"to_version":2}'
-expect_error "comparar a mesma versão" 422 INVALID_VERSION_COMPARISON
+expect_error "comparing a version with itself" 422 INVALID_VERSION_COMPARISON
 
 http POST "/prompts/$PID/recover"
-expect_error "restaurar prompt não deletado" 409 PROMPT_NOT_DELETED
+expect_error "restoring a prompt that is not deleted" 409 PROMPT_NOT_DELETED
 
 http POST /prompts '{"name":"   ","content":"x"}'
-expect_error "nome em branco" 409 DOMAIN_RULE_VIOLATION
+expect_error "blank name" 409 DOMAIN_RULE_VIOLATION
 
-http GET /prompts/nao-e-uuid
-expect_error "UUID inválido (barrado na api, não chega ao core)" 422 INVALID_REQUEST
+http GET /prompts/not-a-uuid
+expect_error "invalid UUID (rejected by the api, never reaches the core)" 422 INVALID_REQUEST
 
-http POST /prompts '{"name":"sem conteudo"}'
-expect_error "corpo incompleto (barrado na api)" 422 INVALID_REQUEST
+http POST /prompts '{"name":"no content"}'
+expect_error "incomplete body (rejected by the api)" 422 INVALID_REQUEST
 
-# limpeza: os prompts do teste terminam deletados (soft delete)
+# cleanup: the test prompts end up deleted (soft delete)
 http DELETE "/prompts/$PID"
 http DELETE "/prompts/$NATS_PID"
 
 # ------------------------------------------------------------------ resultado
 
 TOTAL=$((PASSED + FAILED))
-printf '\n%s== Resultado ==%s\n' "$BOLD" "$RESET"
-printf 'Total: %d | %sOK: %d%s | %sFalhas: %d%s\n' \
+printf '\n%s== Result ==%s\n' "$BOLD" "$RESET"
+printf 'Total: %d | %sPassed: %d%s | %sFailed: %d%s\n' \
   "$TOTAL" "$GREEN" "$PASSED" "$RESET" "$RED" "$FAILED" "$RESET"
 
 if ((FAILED > 0)); then
-  printf '\nFalharam:\n'
+  printf '\nFailed:\n'
   for item in "${FAILURES[@]}"; do printf '  - %s\n' "$item"; done
   exit 1
 fi
-printf '%sTudo certo.%s\n' "$GREEN" "$RESET"
+printf '%sAll good.%s\n' "$GREEN" "$RESET"

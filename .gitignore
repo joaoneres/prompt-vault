@@ -8,3 +8,7 @@ __pycache__/
 node_modules/
 dist/
 *.tsbuildinfo
+
+docs/guide/.build.html
+docs/guide/.pass1.pdf
+docs/guide/.cover.pdf

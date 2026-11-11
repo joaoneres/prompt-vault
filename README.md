@@ -69,6 +69,8 @@ Always JSON, never a stack trace (it stays in the logs):
 { "error": { "code": "PROMPT_NOT_FOUND", "message": "Prompt 123 não encontrado", "details": {} } }
 ```
 
+The `message` is written for people and, in this project, in Portuguese (like the texts of the front end). Clients should rely on the `code`, which is stable.
+
 | HTTP | Codes |
 |---|---|
 | 404 | `PROMPT_NOT_FOUND`, `VERSION_NOT_FOUND` |
@@ -106,6 +108,10 @@ The global smoke test uses the API's virtualenv, so run `cd api && uv sync` firs
 The front has no automated tests yet: `cd front && npm run build` type-checks and builds it.
 
 The global smoke test (needs NATS, core and api running) checks that every HTTP body is valid against the API DTOs and equal to the `data` returned by the core for the same query, that both sides see the same state, that domain events are published, and that core errors reach HTTP with the right status and code.
+
+## Study material
+
+[`docs/`](docs) has a study guide (PDF) and an interactive map (HTML) that explain the whole project, in English: Python essentials, hexagonal architecture, the core, the api, the front end and how a request travels through all of them. See [`docs/README.md`](docs/README.md).
 
 ## Environment setup
 

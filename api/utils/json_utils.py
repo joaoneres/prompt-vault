@@ -26,7 +26,7 @@ def decode_json_object(raw: bytes) -> dict[str, Any]:
     try:
         data = json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise CoreResponseException("resposta não é JSON") from exc
+        raise CoreResponseException("response is not JSON") from exc
     if not isinstance(data, dict):
-        raise CoreResponseException("resposta não é um objeto JSON")
+        raise CoreResponseException("response is not a JSON object")
     return data

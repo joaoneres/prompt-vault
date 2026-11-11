@@ -22,7 +22,7 @@ async def app_exception_handler(_: Request, exc: BaseAppException) -> JSONRespon
 
 async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
     fields = [
-        {"campo": ".".join(str(p) for p in err["loc"]), "erro": err["msg"]}
+        {"field": ".".join(str(p) for p in err["loc"]), "error": err["msg"]}
         for err in exc.errors()
     ]
     invalid = InvalidRequestException({"fields": fields})

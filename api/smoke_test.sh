@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Smoke test da API HTTP do prompt-vault, usando apenas curl e python3.
-# Percorre o fluxo completo HTTP -> NATS -> core -> SQLite.
+# Smoke test of the prompt-vault HTTP API, using only curl and python3.
+# It walks through the whole flow HTTP -> NATS -> core -> SQLite.
 #
-# Pré-requisitos: NATS, core e API rodando.
+# Prerequisites: NATS, core and API running.
 #   (core)  docker compose up -d && uv run src/main.py
 #   (api)   uv run uvicorn main:app
 #
-# Uso: ./smoke_test.sh
-# Variáveis: API_URL (http://localhost:8000), SMOKE_TIMEOUT (10s por requisição)
-# Efeito colateral: cria prompts "api-smoke-<id>" no banco do core (ficam deletados no fim).
+# Usage: ./smoke_test.sh
+# Variables: API_URL (http://localhost:8000), SMOKE_TIMEOUT (10s per request)
+# Side effect: creates prompts "api-smoke-<id>" in the core database (they end up deleted).
 #
-# Os checks validam status 200, os campos dos DTOs (PromptResponse, PromptVersionResponse,
-# VersionDiffResponse...) e o formato padronizado dos erros.
+# The checks validate status 200, the DTO fields (PromptResponse, PromptVersionResponse,
+# VersionDiffResponse...) and the standardized error format.
 
 set -uo pipefail
 
@@ -37,7 +37,7 @@ trap 'rm -rf "$WORKDIR"' EXIT
 # ------------------------------------------------------------------ helpers
 
 die() {
-  printf '%sErro:%s %s\n' "$RED" "$RESET" "$1" >&2
+  printf '%sError:%s %s\n' "$RED" "$RESET" "$1" >&2
   exit 2
 }
 
@@ -55,16 +55,16 @@ fail() {
   [[ -n "${2:-}" ]] && printf '      %s%s%s\n' "$DIM" "$2" "$RESET"
 }
 
-expect_eq() { # <descrição> <esperado> <obtido>
-  if [[ "$3" == "$2" ]]; then pass "$1"; else fail "$1" "esperado: $2 | obtido: $3 | corpo: $BODY"; fi
+expect_eq() { # <description> <expected> <actual>
+  if [[ "$3" == "$2" ]]; then pass "$1"; else fail "$1" "expected: $2 | actual: $3 | body: $BODY"; fi
 }
 
-expect_contains() { # <descrição> <trecho> <texto>
-  if [[ "$3" == *"$2"* ]]; then pass "$1"; else fail "$1" "não encontrado: $2 | em: $3"; fi
+expect_contains() { # <description> <snippet> <text>
+  if [[ "$3" == *"$2"* ]]; then pass "$1"; else fail "$1" "not found: $2 | in: $3"; fi
 }
 
-# Lê $BODY (JSON) e imprime o valor do caminho. Ex.: error.code, versions.#, *.id
-# '#' = tamanho da lista, '*' = todos os itens (separados por espaço). Ausente -> <ausente>.
+# Reads $BODY (JSON) and prints the value at the path. E.g. error.code, versions.#, *.id
+# '#' = list length, '*' = every item (space separated). Missing -> <missing>.
 json_get() {
   python3 - "$1" "$BODY" <<'PY'
 import json, sys
@@ -86,7 +86,7 @@ def walk(cur, parts):
 try:
     value = walk(json.loads(raw), [] if path == "" else path.split("."))
 except (ValueError, KeyError, IndexError, TypeError):
-    print("<ausente>")
+    print("<missing>")
     sys.exit(0)
 
 def fmt(v):
@@ -96,7 +96,7 @@ print(" ".join(str(fmt(i)) for i in value) if isinstance(value, list) else fmt(v
 PY
 }
 
-# call <METHOD> <path> [json]  ->  $STATUS e $BODY
+# call <METHOD> <path> [json]  ->  $STATUS and $BODY
 call() {
   local method=$1 path=$2 payload=${3:-}
   local args=(-s -o "$WORKDIR/body" -w '%{http_code}' --max-time "$TIMEOUT" -X "$method" "$API_URL$path")
@@ -105,50 +105,50 @@ call() {
   BODY="$(cat "$WORKDIR/body" 2>/dev/null)"
 }
 
-expect_ok() { # <descrição>  (status 200)
+expect_ok() { # <description>  (status 200)
   expect_eq "$1 -> HTTP 200" "200" "$STATUS"
 }
 
-expect_error() { # <descrição> <status> <código>
+expect_error() { # <description> <status> <code>
   expect_eq "$1 -> HTTP $2" "$2" "$STATUS"
-  expect_eq "$1 -> código $3" "$3" "$(json_get error.code)"
+  expect_eq "$1 -> code $3" "$3" "$(json_get error.code)"
 }
 
-# ------------------------------------------------------------------ pré-requisitos
+# ------------------------------------------------------------------ prerequisites
 
-command -v curl >/dev/null || die "curl não encontrado no PATH"
-command -v python3 >/dev/null || die "python3 não encontrado no PATH"
+command -v curl >/dev/null || die "curl not found in PATH"
+command -v python3 >/dev/null || die "python3 not found in PATH"
 
 call GET /prompts/active
-[[ "$STATUS" == "000" ]] && die "sem conexão com a API em $API_URL (uv run uvicorn main:app)"
+[[ "$STATUS" == "000" ]] && die "cannot connect to the API at $API_URL (uv run uvicorn main:app)"
 [[ "$STATUS" == "200" ]] \
-  || die "GET /prompts/active devolveu HTTP $STATUS (NATS e core estão no ar?). Corpo: $BODY"
+  || die "GET /prompts/active returned HTTP $STATUS (are NATS and the core up?). Body: $BODY"
 
 printf '%sprompt-vault API smoke test%s  %s(API: %s, run: %s)%s\n' \
   "$BOLD" "$RESET" "$DIM" "$API_URL" "$RUN_ID" "$RESET"
 
 # ------------------------------------------------------------------ fluxo principal
 
-section "Prompts e versões"
+section "Prompts and versions"
 
-call POST /prompts "{\"name\":\"api-smoke-$RUN_ID\",\"content\":\"Ola\\nmundo\"}"
+call POST /prompts "{\"name\":\"api-smoke-$RUN_ID\",\"content\":\"Hello\\nworld\"}"
 expect_ok "POST /prompts"
 PID="$(json_get id)"
-[[ "$PID" =~ ^[0-9a-f-]{36}$ ]] && pass "POST /prompts -> id é um UUID ($PID)" \
-  || { fail "POST /prompts -> id é um UUID" "corpo: $BODY"; die "sem id, não dá para continuar"; }
+[[ "$PID" =~ ^[0-9a-f-]{36}$ ]] && pass "POST /prompts -> id is a UUID ($PID)" \
+  || { fail "POST /prompts -> id is a UUID" "body: $BODY"; die "no id, cannot continue"; }
 expect_eq "POST /prompts -> status active" "active" "$(json_get status)"
-expect_eq "POST /prompts -> devolve o content" "$(printf 'Ola\nmundo')" "$(json_get content)"
+expect_eq "POST /prompts -> returns the content" "$(printf 'Hello\nworld')" "$(json_get content)"
 V1_ID="$(json_get active_version_id)"
-[[ "$V1_ID" =~ ^[0-9a-f-]{36}$ ]] && pass "POST /prompts -> active_version_id é um UUID" \
-  || fail "POST /prompts -> active_version_id é um UUID" "obtido: $V1_ID"
+[[ "$V1_ID" =~ ^[0-9a-f-]{36}$ ]] && pass "POST /prompts -> active_version_id is a UUID" \
+  || fail "POST /prompts -> active_version_id is a UUID" "actual: $V1_ID"
 
-call POST "/prompts/$PID/versions" '{"content":"Oi\nmundo"}'
+call POST "/prompts/$PID/versions" '{"content":"Hi\nworld"}'
 expect_ok "POST /prompts/{id}/versions"
 expect_eq "POST versions -> version_number 2" "2" "$(json_get version_number)"
 expect_eq "POST versions -> prompt_id" "$PID" "$(json_get prompt_id)"
 expect_eq "POST versions -> is_active false" "false" "$(json_get is_active)"
 
-call PUT "/prompts/$PID/content" '{"content":"E ai\nmundo\nfim"}'
+call PUT "/prompts/$PID/content" '{"content":"Hey\nworld\nend"}'
 expect_ok "PUT /prompts/{id}/content"
 expect_eq "PUT content -> version_number 3" "3" "$(json_get version_number)"
 expect_eq "PUT content -> is_active true" "true" "$(json_get is_active)"
@@ -157,84 +157,84 @@ V3_ID="$(json_get id)"
 call GET "/prompts/$PID"
 expect_ok "GET /prompts/{id}"
 expect_eq "GET prompt -> id" "$PID" "$(json_get id)"
-expect_eq "GET prompt -> 3 versões" "3" "$(json_get versions.#)"
-expect_eq "GET prompt -> active_version_id é o da versão 3" "$V3_ID" "$(json_get active_version_id)"
+expect_eq "GET prompt -> 3 versions" "3" "$(json_get versions.#)"
+expect_eq "GET prompt -> active_version_id is the one of version 3" "$V3_ID" "$(json_get active_version_id)"
 
 call GET "/prompts/$PID/versions"
 expect_ok "GET /prompts/{id}/versions"
-expect_eq "GET versions -> array com 3 versões" "3" "$(json_get '#')"
-expect_eq "GET versions -> números" "1 2 3" "$(json_get '*.version_number')"
+expect_eq "GET versions -> array with 3 versions" "3" "$(json_get '#')"
+expect_eq "GET versions -> numbers" "1 2 3" "$(json_get '*.version_number')"
 
 call POST "/prompts/$PID/activate" '{"version_number":1}'
 expect_ok "POST /prompts/{id}/activate"
-expect_eq "POST activate -> devolve o prompt com a versão 1 ativa" "$V1_ID" "$(json_get active_version_id)"
+expect_eq "POST activate -> returns the prompt with version 1 active" "$V1_ID" "$(json_get active_version_id)"
 
 call POST "/prompts/$PID/compare" '{"from_version":1,"to_version":3}'
 expect_ok "POST /prompts/{id}/compare"
 expect_eq "POST compare -> has_changes" "true" "$(json_get has_changes)"
-expect_eq "POST compare -> ids das versões" "$V1_ID $V3_ID" "$(json_get version_id_before) $(json_get version_id_after)"
-expect_eq "POST compare -> tipos das linhas" "removed added unchanged added" "$(json_get 'lines.*.kind')"
+expect_eq "POST compare -> version ids" "$V1_ID $V3_ID" "$(json_get version_id_before) $(json_get version_id_after)"
+expect_eq "POST compare -> line kinds" "removed added unchanged added" "$(json_get 'lines.*.kind')"
 
-section "Listagens, delete e recover"
+section "Listings, delete and recover"
 
 call GET /prompts/active
 expect_ok "GET /prompts/active"
-expect_contains "GET /prompts/active -> array com o prompt" "$PID" "$(json_get '*.id')"
+expect_contains "GET /prompts/active -> array with the prompt" "$PID" "$(json_get '*.id')"
 
 call DELETE "/prompts/$PID"
 expect_ok "DELETE /prompts/{id}"
-expect_eq "DELETE -> devolve o prompt deleted" "deleted" "$(json_get status)"
+expect_eq "DELETE -> returns the deleted prompt" "deleted" "$(json_get status)"
 
 call GET /prompts/deleted
 expect_ok "GET /prompts/deleted"
-expect_contains "GET /prompts/deleted -> array com o prompt" "$PID" "$(json_get '*.id')"
+expect_contains "GET /prompts/deleted -> array with the prompt" "$PID" "$(json_get '*.id')"
 
 call POST "/prompts/$PID/recover"
 expect_ok "POST /prompts/{id}/recover"
-expect_eq "POST recover -> devolve o prompt active" "active" "$(json_get status)"
+expect_eq "POST recover -> returns the active prompt" "active" "$(json_get status)"
 
 # ------------------------------------------------------------------ erros
 
-section "Erros (formato padronizado: error.code, error.message, error.details)"
+section "Errors (standardized format: error.code, error.message, error.details)"
 
 RANDOM_UUID="$(python3 -c 'import uuid; print(uuid.uuid4())')"
 
 call GET "/prompts/$RANDOM_UUID"
-expect_error "prompt inexistente" 404 PROMPT_NOT_FOUND
-expect_eq "erro traz message" "true" "$([[ "$(json_get error.message)" != "<ausente>" ]] && echo true || echo false)"
-expect_eq "erro traz details" "{}" "$(json_get error.details)"
+expect_error "unknown prompt" 404 PROMPT_NOT_FOUND
+expect_eq "error carries message" "true" "$([[ "$(json_get error.message)" != "<missing>" ]] && echo true || echo false)"
+expect_eq "error carries details" "{}" "$(json_get error.details)"
 
-call GET /prompts/nao-e-uuid
-expect_error "UUID inválido no path" 422 INVALID_REQUEST
+call GET /prompts/not-a-uuid
+expect_error "invalid UUID in the path" 422 INVALID_REQUEST
 
-call POST /prompts '{"name":"sem conteudo"}'
-expect_error "corpo sem campo obrigatório" 422 INVALID_REQUEST
+call POST /prompts '{"name":"no content"}'
+expect_error "body without a required field" 422 INVALID_REQUEST
 
 call POST "/prompts/$PID/activate" '{"version_number":99}'
-expect_error "ativar versão inexistente" 404 VERSION_NOT_FOUND
+expect_error "activating an unknown version" 404 VERSION_NOT_FOUND
 
 call POST "/prompts/$PID/compare" '{"from_version":2,"to_version":2}'
-expect_error "comparar a mesma versão" 422 INVALID_VERSION_COMPARISON
+expect_error "comparing a version with itself" 422 INVALID_VERSION_COMPARISON
 
 call POST "/prompts/$PID/recover"
-expect_error "recuperar prompt que não está deletado" 409 PROMPT_NOT_DELETED
+expect_error "recovering a prompt that is not deleted" 409 PROMPT_NOT_DELETED
 
 call POST /prompts '{"name":"   ","content":"x"}'
-expect_eq "nome em branco -> HTTP 409" "409" "$STATUS"
+expect_eq "blank name -> HTTP 409" "409" "$STATUS"
 
-# limpeza: o prompt do teste volta a ficar deletado (soft delete), sem lixo ativo
+# cleanup: the test prompt ends up deleted (soft delete), leaving no active garbage
 call DELETE "/prompts/$PID"
 
 # ------------------------------------------------------------------ resultado
 
 TOTAL=$((PASSED + FAILED))
-printf '\n%s== Resultado ==%s\n' "$BOLD" "$RESET"
-printf 'Total: %d | %sOK: %d%s | %sFalhas: %d%s\n' \
+printf '\n%s== Result ==%s\n' "$BOLD" "$RESET"
+printf 'Total: %d | %sPassed: %d%s | %sFailed: %d%s\n' \
   "$TOTAL" "$GREEN" "$PASSED" "$RESET" "$RED" "$FAILED" "$RESET"
 
 if ((FAILED > 0)); then
-  printf '\nFalharam:\n'
+  printf '\nFailed:\n'
   for item in "${FAILURES[@]}"; do printf '  - %s\n' "$item"; done
   exit 1
 fi
-printf '%sTudo certo.%s\n' "$GREEN" "$RESET"
+printf '%sAll good.%s\n' "$GREEN" "$RESET"
