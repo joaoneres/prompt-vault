@@ -1,0 +1,917 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Mapa do Prompt Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: a tool, not a poster. A sticky tab bar switches between six views; each view is a
+   diagram stage on the left and an inspector on the right that explains whatever is selected.
+   Layer colors are the same five used in the PDF guide, so both materials read as one system. */
+:root {
+  --bg: #F2F5F9; --surface: #FFFFFF; --surface-2: #E9EFF6; --line: #D3DCE8;
+  --fg: #17243A; --muted: #566883; --accent: #2F5D9F; --accent-fg: #FFFFFF;
+  --ok: #1E8E5A; --bad: #C9402B; --code-bg: #F4F7FB;
+  --domain: #D9482B; --app: #E0961F; --port: #188A68; --adapter: #3B5E92; --infra: #6B7A90;
+  --t-domain: #FBE3DC; --t-app: #FBEBCB; --t-port: #D3EEE4; --t-adapter: #DCE6F3; --t-infra: #E6EAF0;
+  --on-domain: #FFFFFF; --on-app: #2A1B00; --on-port: #FFFFFF; --on-adapter: #FFFFFF; --on-infra: #FFFFFF;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1422; --surface: #142035; --surface-2: #1B2A44; --line: #27395A;
+    --fg: #E7EDF7; --muted: #9AA9C2; --accent: #7FA8E6; --accent-fg: #0C1422;
+    --ok: #4CC38A; --bad: #FF7A63; --code-bg: #0F192B;
+    --domain: #FF7A5C; --app: #F5B54B; --port: #3CC9A0; --adapter: #7FA3D9; --infra: #9AA8BD;
+    --t-domain: #3A1F1A; --t-app: #3A2C12; --t-port: #12342B; --t-adapter: #1B2A44; --t-infra: #222C3B;
+    --on-domain: #1A0A05; --on-app: #1F1400; --on-port: #05241C; --on-adapter: #0A1424; --on-infra: #0F1724;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1422; --surface: #142035; --surface-2: #1B2A44; --line: #27395A;
+  --fg: #E7EDF7; --muted: #9AA9C2; --accent: #7FA8E6; --accent-fg: #0C1422;
+  --ok: #4CC38A; --bad: #FF7A63; --code-bg: #0F192B;
+  --domain: #FF7A5C; --app: #F5B54B; --port: #3CC9A0; --adapter: #7FA3D9; --infra: #9AA8BD;
+  --t-domain: #3A1F1A; --t-app: #3A2C12; --t-port: #12342B; --t-adapter: #1B2A44; --t-infra: #222C3B;
+  --on-domain: #1A0A05; --on-app: #1F1400; --on-port: #05241C; --on-adapter: #0A1424; --on-infra: #0F1724;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font);
+  -webkit-text-size-adjust: 100%;
+}
+button, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+h1, h2, h3, p { margin: 0; text-wrap: balance; }
+p { text-wrap: pretty; }
+
+.wrap {
+  max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.top .wrap { padding-block: 12px 0; }
+.brand { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; }
+.brand svg { flex: none; }
+.brand h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
+.brand p { color: var(--muted); font-size: 0.85rem; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 9px 14px 8px;
+  cursor: pointer; color: var(--muted); font-weight: 500; font-size: 0.92rem; white-space: nowrap;
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+
+main.wrap { padding-block: 22px 56px; }
+.lede { color: var(--muted); max-width: 70ch; margin-bottom: 16px; }
+.lede b { color: var(--fg); font-weight: 600; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.stage { padding: 14px; }
+.inspector { padding: 16px; position: sticky; top: 112px; }
+@media (max-width: 920px) { .inspector { position: static; } }
+.scroll { overflow-x: auto; }
+svg.diagram { display: block; width: 100%; height: auto; min-width: 640px; }
+.cap { font: 600 10.5px var(--font); letter-spacing: 0.08em; fill: var(--muted); }
+.svt { font: 500 12.5px var(--font); fill: var(--fg); }
+.svt-b { font: 600 13px var(--font); fill: var(--fg); }
+.svt-s { font: 400 11px var(--font); fill: var(--muted); }
+.svt-m { font: 400 11.5px var(--mono); fill: var(--fg); }
+
+/* layer palette used by SVG shapes and chips */
+.l-domain { fill: var(--t-domain); stroke: var(--domain); } .l-app { fill: var(--t-app); stroke: var(--app); }
+.l-port { fill: var(--t-port); stroke: var(--port); } .l-adapter { fill: var(--t-adapter); stroke: var(--adapter); }
+.l-infra { fill: var(--t-infra); stroke: var(--infra); } .l-ext { fill: var(--surface-2); stroke: var(--line); }
+.badge { display: inline-block; padding: 1px 9px; border-radius: 99px; font: 600 11px var(--font); letter-spacing: 0.02em; }
+.b-domain { background: var(--domain); color: var(--on-domain); } .b-app { background: var(--app); color: var(--on-app); }
+.b-port { background: var(--port); color: var(--on-port); } .b-adapter { background: var(--adapter); color: var(--on-adapter); }
+.b-infra { background: var(--infra); color: var(--on-infra); } .b-ext { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface-2); border-radius: 99px; padding: 2px 10px; font-size: 0.82rem; }
+.chip.dim { opacity: 0.35; }
+
+.ring { cursor: pointer; }
+.ring rect { stroke-width: 1.5; transition: stroke-width .15s, filter .15s; }
+.ring:hover > rect:first-child, .ring.sel > rect:first-child { stroke-width: 3.2; }
+.ring.sel > rect:first-child { filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor 45%, transparent)); }
+.node { cursor: pointer; } .node rect { stroke-width: 1.6; transition: stroke-width .15s, opacity .2s; }
+.node:hover rect, .node.sel rect { stroke-width: 3.2; }
+.node.faded { opacity: 0.35; }
+.edge { stroke: var(--muted); stroke-width: 1.5; fill: none; transition: stroke .2s, stroke-width .2s, opacity .2s; }
+.edge.out { stroke: var(--accent); stroke-width: 2.6; } .edge.in { stroke: var(--app); stroke-width: 2.6; }
+.edge.faded { opacity: 0.2; }
+.edge.ok { stroke: var(--ok); stroke-width: 3; } .edge.no { stroke: var(--bad); stroke-width: 3; stroke-dasharray: 6 5; }
+
+.insp-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.insp-h h2 { font-size: 1.05rem; font-weight: 600; }
+.insp p { margin-bottom: 10px; font-size: 0.93rem; }
+.insp h3 { font: 600 11px var(--font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
+.insp ul { margin: 0 0 6px; padding-left: 18px; font-size: 0.9rem; } .insp li { margin-bottom: 3px; }
+.insp .quote { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; color: var(--muted); font-size: 0.9rem; margin-bottom: 10px; }
+.bars { display: grid; gap: 5px; }
+.bar { display: grid; grid-template-columns: 62px 1fr 34px; gap: 8px; align-items: center; font-size: 0.8rem; }
+.bar i { display: block; height: 9px; border-radius: 5px; background: var(--line); position: relative; overflow: hidden; }
+.bar i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--c); border-radius: 5px; }
+.bar span:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.bar.cur { font-weight: 600; }
+pre.code {
+  margin: 0 0 10px; padding: 10px 12px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+  font: 400 12px/1.5 var(--mono); overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4;
+}
+.btn {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  font-weight: 500; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--accent); } .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.pri { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn small { font: 400 11px var(--mono); opacity: 0.75; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* dependency tester */
+.tester { margin-top: 12px; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; display: grid; gap: 10px; }
+.tester label { font-size: 0.85rem; color: var(--muted); }
+select { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; }
+.verdict { padding: 9px 12px; border-radius: 8px; font-size: 0.9rem; border: 1px solid var(--line); background: var(--surface-2); }
+.verdict.ok { border-color: var(--ok); } .verdict.no { border-color: var(--bad); }
+.verdict b.ok { color: var(--ok); } .verdict b.no { color: var(--bad); }
+
+/* sequence */
+.lifeline { stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 3 4; }
+.arrow-g { cursor: pointer; } .arrow-g .ln { stroke: var(--muted); stroke-width: 1.4; transition: stroke .2s, stroke-width .2s, opacity .2s; }
+.arrow-g.done .ln { opacity: 0.45; } .arrow-g.cur .ln { stroke: var(--accent); stroke-width: 3; opacity: 1; }
+.arrow-g.future .ln { opacity: 0.35; } .arrow-g .lbl { font: 400 11px var(--font); fill: var(--fg); }
+.arrow-g.cur .lbl { font-weight: 600; } .arrow-g .num { fill: var(--muted); } .arrow-g.cur .num { fill: var(--accent); }
+.arrow-g .numt { font: 600 8.5px var(--font); fill: var(--surface); text-anchor: middle; }
+#dot { transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+.stepbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.stepbar .count { margin-left: auto; color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.lay-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
+.lay-row .badge { opacity: 0.28; transition: opacity .2s; } .lay-row .badge.on { opacity: 1; }
+.note { padding: 8px 10px; border-radius: 8px; background: var(--surface-2); font-size: 0.86rem; margin-bottom: 10px; }
+.note.hot { background: var(--t-domain); border: 1px solid var(--domain); }
+.logline { font: 400 11.5px/1.5 var(--mono); background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 6px; }
+
+/* simulator */
+.sim-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.sim-grid > * { min-width: 0; }
+.versions { display: flex; flex-wrap: wrap; gap: 10px; }
+.vcard {
+  width: 150px; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+  cursor: pointer; position: relative; min-height: 84px;
+}
+.vcard:hover { border-color: var(--port); }
+.vcard.act { background: var(--t-port); border: 2px solid var(--port); padding: 8px 10px; }
+.vcard .vn { font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.vcard pre { margin: 0; font: 400 11.5px/1.4 var(--mono); color: var(--muted); white-space: pre-wrap; word-break: break-word; max-height: 4.4em; overflow: hidden; }
+.vcard.new { animation: pop .35s ease-out; }
+@keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+textarea#sim-content { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: 400 13px/1.45 var(--mono); resize: vertical; }
+.result { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); font-size: 0.88rem; min-height: 44px; }
+.result.ok { border-color: var(--ok); } .result.err { border-color: var(--bad); background: var(--t-domain); }
+.result .mono { display: block; margin-top: 4px; color: var(--muted); font-size: 0.78rem; overflow-x: auto; white-space: pre; }
+.st-box { transition: opacity .25s, stroke-width .2s; } .st-box.cur { stroke-width: 3.4; } .st-box:not(.cur) { opacity: 0.55; }
+.tr { transition: opacity .25s, stroke .25s; stroke: var(--muted); stroke-width: 1.4; fill: none; opacity: 0.22; }
+.tr.can { opacity: 1; stroke: var(--accent); stroke-width: 2.4; }
+.trl { font: 500 10.5px var(--mono); fill: var(--muted); opacity: 0.5; } .trl.can { fill: var(--fg); opacity: 1; font-weight: 600; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 0.88rem; margin: 0 0 6px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); font-size: 0.85rem; }
+.evlog { list-style: none; margin: 0; padding: 0; max-height: 230px; overflow-y: auto; display: grid; gap: 4px; }
+.evlog li { font: 400 12px var(--mono); padding: 4px 8px; border-radius: 6px; background: var(--surface-2); }
+.evlog li:first-child { outline: 1.5px solid var(--accent); }
+.evlog li span { color: var(--muted); }
+table.diff { border-collapse: collapse; width: 100%; font: 400 12px var(--mono); }
+table.diff td, table.diff th { padding: 3px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+table.diff th { font: 600 10.5px var(--font); color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+.dt { font-weight: 600; } .dt.added { color: var(--ok); } .dt.removed { color: var(--bad); } .dt.modified { color: var(--app); } .dt.unchanged { color: var(--muted); font-weight: 400; }
+
+/* subjects */
+.filters { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.fbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 3px 12px; cursor: pointer; font-size: 0.85rem; }
+.fbtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.map-head, .map-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1.25fr); gap: 0; align-items: stretch; min-width: 640px; }
+.map-head div { font: 600 10.5px var(--font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 10px 6px; }
+.map-row { background: none; border: 0; padding: 0; width: 100%; text-align: left; cursor: pointer; margin-bottom: 6px; }
+.map-row > div { padding: 8px 10px; border: 1px solid var(--line); background: var(--surface); position: relative; font-size: 0.86rem; min-width: 0; overflow-wrap: anywhere; }
+.map-row > div:first-child { border-radius: 8px 0 0 8px; border-left: 4px solid var(--adapter); }
+.map-row > div:nth-child(2) { border-left: 0; border-right: 0; border-top-color: var(--line); background: var(--t-app); }
+.map-row > div:last-child { border-radius: 0 8px 8px 0; border-left: 0; background: var(--t-domain); }
+.map-row.query > div:last-child { background: var(--t-port); }
+.map-row > div:first-child::after, .map-row > div:nth-child(2)::after {
+  content: "→"; position: absolute; right: -9px; top: 50%; transform: translateY(-50%); z-index: 1; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 50%; width: 18px; height: 18px; display: grid; place-items: center; font-size: 11px; color: var(--muted);
+}
+.map-row:hover > div, .map-row.sel > div { border-color: var(--accent); }
+.map-row.sel > div:first-child { box-shadow: -2px 0 0 0 var(--accent) inset; }
+.map-row .sub { color: var(--muted); font-size: 0.78rem; display: block; }
+.legend-note { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--t-app); border: 1px solid var(--app); font-size: 0.86rem; }
+
+/* wiring */
+.wire-steps { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
+.wstep { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; font-size: 0.82rem; max-width: 190px; text-align: left; }
+.wstep b { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 0.78rem; }
+.wstep[aria-pressed="true"] { border-color: var(--accent); background: var(--surface-2); } .wstep[aria-pressed="true"] b { background: var(--accent); color: var(--accent-fg); }
+.wnode { transition: opacity .3s; } .wnode.hid { opacity: 0.13; } .wnode.new rect { stroke-width: 3.2; }
+.wedge { stroke: var(--muted); stroke-width: 1.4; fill: none; transition: opacity .3s; } .wedge.hid { opacity: 0.1; }
+
+footer { color: var(--muted); font-size: 0.82rem; margin-top: 28px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="-18 -18 36 36" aria-hidden="true">
+        <polygon points="0,-16 13.9,-8 13.9,8 0,16 -13.9,8 -13.9,-8" fill="none" stroke="var(--infra)" stroke-width="2"/>
+        <polygon points="0,-11 9.5,-5.5 9.5,5.5 0,11 -9.5,5.5 -9.5,-5.5" fill="none" stroke="var(--adapter)" stroke-width="2"/>
+        <polygon points="0,-6.5 5.6,-3.2 5.6,3.2 0,6.5 -5.6,3.2 -5.6,-3.2" fill="var(--domain)" stroke="var(--domain)" stroke-width="1.5"/>
+      </svg>
+      <div>
+        <h1>Mapa do Prompt Vault</h1>
+        <p>Como as estruturas do projeto se conectam, com base no guia de estudos</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Visões do mapa" id="tabs"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============ 1. CAMADAS ============ -->
+<section class="view" id="v-camadas" role="tabpanel" aria-labelledby="t-camadas">
+  <p class="lede"><b>Clique em um anel</b> para ver o que cada camada faz, o que ela pode importar e quais arquivos moram nela. O núcleo fica no centro; tudo que entra ou sai do sistema atravessa os anéis.</p>
+  <div class="layout">
+    <div class="card stage"><div class="scroll"><svg class="diagram" id="svg-layers" viewBox="0 0 760 470" role="img" aria-label="Cinco camadas como anéis concêntricos: domain no centro, depois app, port e adapter, com infra abaixo e o mundo externo na borda"></svg></div></div>
+    <aside class="card inspector insp" id="insp-layers" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 2. DEPENDENCIAS ============ -->
+<section class="view" id="v-dependencias" role="tabpanel" aria-labelledby="t-dependencias" hidden>
+  <p class="lede">A regra do projeto cabe numa frase: <b>as dependências apontam sempre para dentro</b>. Passe o mouse (ou toque) em uma camada para ver quem ela importa e quem a importa. Depois tente quebrar a regra no testador.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="scroll"><svg class="diagram" id="svg-deps" viewBox="0 0 760 390" role="img" aria-label="Setas de importação entre adapter, infra, app, port e domain. Nenhuma seta sai de domain."></svg></div>
+      <div class="tester">
+        <div class="row"><b>Testador de dependências</b><span class="svt-s" style="font:400 0.82rem var(--font);color:var(--muted)">Escolha quem tenta importar quem.</span></div>
+        <div class="row">
+          <label for="dep-from">A camada</label><select id="dep-from"></select>
+          <label for="dep-to">tenta importar</label><select id="dep-to"></select>
+          <button class="btn pri" id="dep-go" type="button">Testar</button>
+        </div>
+        <div class="row" id="dep-quick"></div>
+        <div class="verdict" id="dep-verdict">Escolha um par e clique em <b>Testar</b>.</div>
+      </div>
+    </div>
+    <aside class="card inspector insp" id="insp-deps" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 3. UMA MENSAGEM ============ -->
+<section class="view" id="v-mensagem" role="tabpanel" aria-labelledby="t-mensagem" hidden>
+  <p class="lede">O caminho de <b>uma única mensagem</b>: alguém altera o conteúdo de um prompt pelo subject <code>prompt.content.update</code>. Avance passo a passo e observe quais camadas acendem. A regra de negócio acontece em um só ponto, sem tecnologia.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="scroll"><svg class="diagram" id="svg-seq" viewBox="0 0 780 540" role="img" aria-label="Diagrama de sequência com sete participantes e doze mensagens"></svg></div>
+      <div class="stepbar">
+        <button class="btn" id="seq-prev" type="button">◀ Anterior</button>
+        <button class="btn pri" id="seq-next" type="button">Próximo ▶</button>
+        <button class="btn" id="seq-play" type="button">Reproduzir</button>
+        <button class="btn" id="seq-reset" type="button">↺ Início</button>
+        <span class="count" id="seq-count"></span>
+      </div>
+    </div>
+    <aside class="card inspector insp" id="insp-seq" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 4. SIMULADOR ============ -->
+<section class="view" id="v-simulador" role="tabpanel" aria-labelledby="t-simulador" hidden>
+  <p class="lede">Um <b>Prompt</b> de verdade, só que na tela: as regras abaixo são as mesmas do domínio. Aperte os botões, inclusive os que <b>deveriam falhar</b>, e veja o estado, os eventos e o erro que o NATS devolveria.</p>
+  <div class="layout">
+    <div class="card stage sim-grid">
+      <div class="scroll"><svg class="diagram" id="svg-state" viewBox="0 0 520 170" style="min-width:520px" role="img" aria-label="Máquina de estados: ACTIVE, INACTIVE e DELETED"></svg></div>
+      <div>
+        <div class="svt-s" style="font:600 11px var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Versões (clique em uma para ativá-la)</div>
+        <div class="versions" id="sim-versions"></div>
+      </div>
+      <div>
+        <label for="sim-content" style="font-size:.85rem;color:var(--muted)">Conteúdo da próxima versão (uma linha por linha do diff)</label>
+        <textarea id="sim-content" rows="3">E ai
+mundo
+fim</textarea>
+      </div>
+      <div class="row" id="sim-actions"></div>
+      <div class="result" id="sim-result">Aguardando uma ação.</div>
+      <div>
+        <div class="row" style="margin-bottom:8px">
+          <b style="font-size:.92rem">Comparar versões</b>
+          <label for="cmp-a" class="svt-s" style="font:400 .85rem var(--font)">de</label><select id="cmp-a"></select>
+          <label for="cmp-b" class="svt-s" style="font:400 .85rem var(--font)">para</label><select id="cmp-b"></select>
+          <button class="btn" id="cmp-go" type="button">Comparar</button>
+        </div>
+        <div id="cmp-out"></div>
+      </div>
+    </div>
+    <aside class="card inspector insp" id="insp-sim" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 5. SUBJECTS ============ -->
+<section class="view" id="v-subjects" role="tabpanel" aria-labelledby="t-subjects" hidden>
+  <p class="lede">Cada subject do NATS vira <b>um caso de uso</b>, que chama <b>um método do domínio</b>. Clique em uma linha para ver o payload, o que volta, os eventos publicados, os erros possíveis e um comando pronto para copiar.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="filters" id="sub-filters"></div>
+      <div class="scroll">
+        <div class="map-head"><div>Subject NATS (adapter)</div><div>Caso de uso (app)</div><div>Chamada (domain / port)</div></div>
+        <div id="sub-rows"></div>
+      </div>
+      <div class="legend-note"><b>Repare:</b> <code>deactivate()</code> e <code>reactivate()</code> existem no domínio e no simulador, mas <b>não têm caso de uso nem subject</b> no sistema. Por isso os eventos <code>PromptDeactivated</code> e <code>PromptReactivated</code> nunca são publicados hoje.</div>
+    </div>
+    <aside class="card inspector insp" id="insp-sub" aria-live="polite"></aside>
+  </div>
+</section>
+
+<!-- ============ 6. MONTAGEM ============ -->
+<section class="view" id="v-montagem" role="tabpanel" aria-labelledby="t-montagem" hidden>
+  <p class="lede">O <code>main.py</code> é o único arquivo que conhece todas as camadas: ele cria as peças e as liga, <b>nesta ordem</b>. Avance pelos passos e veja o grafo de objetos crescer.</p>
+  <div class="layout">
+    <div class="card stage">
+      <div class="wire-steps" id="wire-steps"></div>
+      <div class="scroll"><svg class="diagram" id="svg-wire" viewBox="0 0 780 360" role="img" aria-label="Grafo de objetos criado pelo main.py"></svg></div>
+    </div>
+    <aside class="card inspector insp" id="insp-wire" aria-live="polite"></aside>
+  </div>
+</section>
+
+<footer>Mapa construído a partir de <code>core/docs/Prompt-Vault-Guia-Didatico.pdf</code> e do código em <code>core/src/</code>. Os nomes de classes, métodos, subjects e erros são os do projeto.</footer>
+</main>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const SVGNS = "http://www.w3.org/2000/svg";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------------------------------------------------------------- data */
+const LAYERS = {
+  domain: { name: "domain", folder: "src/domain/", lines: 605,
+    role: "As regras do negócio, em Python puro. Nada aqui sabe que existem banco de dados, rede ou terminal.",
+    rest: "As receitas e as regras de higiene da cozinha.",
+    imports: [], importsNote: "ninguém (só a biblioteca padrão do Python)",
+    files: ["entities/prompt.py: Prompt, o agregado raiz", "entities/prompt_version.py: a versão imutável", "status.py: PromptStatus e as transições", "events.py: os 7 eventos de domínio", "exceptions.py: erros de negócio", "diff/: ChangeType, DiffEntry, VersionDiff, DiffStrategy, LineDiffStrategy"],
+    gold: "Se o domínio importasse algo externo, as regras ficariam presas a uma tecnologia." },
+  app: { name: "app", folder: "src/app/", lines: 311,
+    role: "Casos de uso. Carrega o prompt, chama o domínio, salva e publica. Não decide regra nenhuma.",
+    rest: "O chef que coordena o preparo de cada pedido.",
+    imports: ["domain", "port"],
+    files: ["commands/: 6 casos de uso de escrita", "queries/: 5 casos de uso de leitura (com CompareVersions)", "exceptions.py e _helpers.py: PromptNotFoundError e require_prompt"],
+    gold: "Os casos de uso recebem seus colaboradores pelo construtor e nunca criam nada concreto." },
+  port: { name: "port", folder: "src/port/", lines: 57,
+    role: "Três contratos (Protocols) que o núcleo exige do mundo externo.",
+    rest: "O formulário de pedido e o contrato com os fornecedores.",
+    imports: ["domain"], importsNote: "domain, só para tipar Prompt e DomainEvent",
+    files: ["prompt_repository.py: get, save, list_active, list_deleted", "event_publisher.py: publish(events)", "unit_of_work.py: a transação, com commit e rollback"],
+    gold: "Contratos mínimos: só o que os casos de uso realmente precisam." },
+  adapter: { name: "adapter", folder: "src/adapter/", lines: 833,
+    role: "Traduz e conecta tecnologias: implementa as portas com SQLAlchemy e expõe os casos de uso pelo NATS. Sem regra de negócio.",
+    rest: "O garçom, que traduz o cliente, e o entregador, que fala com o fornecedor.",
+    imports: ["app", "port", "domain", "infra"],
+    files: ["persistence/: modelos ORM, mapper, repositório e unit of work", "messaging/: subjects, handlers, server, publicador de eventos, correlation id e erros"],
+    gold: "Os modelos ORM e o JSON nunca atravessam para dentro do núcleo." },
+  infra: { name: "infra", folder: "src/infra/", lines: 150,
+    role: "Só configura as tecnologias: settings, motor do SQLite, cliente NATS e logging.",
+    rest: "O equipamento: fogão, geladeira e telefone.",
+    imports: [], importsNote: "nada do projeto",
+    files: ["settings.py: variáveis de ambiente", "database.py: WAL, foreign_keys e busy_timeout", "nats_client.py: conexão e eventos de conexão", "logging.py: structlog + rich"],
+    gold: "Configura, mas não decide nem traduz nada." },
+  ext: { name: "mundo externo", folder: "fora do processo", lines: null,
+    role: "Quem fala com o sistema ou guarda seus dados: clientes NATS (o nats CLI, outros serviços), o arquivo SQLite e o terminal.",
+    rest: "Os clientes, a rua e os fornecedores.",
+    imports: [], importsNote: "não é código do projeto",
+    files: ["Clientes NATS enviam mensagens e recebem respostas e eventos", "O arquivo prompt_vault.db guarda prompts e versões", "O terminal mostra os logs formatados pelo rich"],
+    gold: "Só os adapters conversam com o mundo externo." },
+};
+const ORDER = ["domain", "app", "port", "adapter", "infra"];
+const badge = k => `<span class="badge b-${k === "ext" ? "ext" : k}">${LAYERS[k].name}/</span>`;
+
+/* ---------------------------------------------------------------- tabs + hash routing */
+const VIEWS = [["camadas", "Camadas"], ["dependencias", "Dependências"], ["mensagem", "Uma mensagem"], ["simulador", "Simulador"], ["subjects", "Subjects"], ["montagem", "Montagem"]];
+const tabs = $("#tabs");
+tabs.innerHTML = VIEWS.map(([id, label]) => `<button class="tab" role="tab" id="t-${id}" data-view="${id}" aria-selected="false" aria-controls="v-${id}">${label}</button>`).join("");
+function show(id) {
+  if (!VIEWS.some(v => v[0] === id)) id = "camadas";
+  VIEWS.forEach(([v]) => { $("#v-" + v).hidden = v !== id; $("#t-" + v).setAttribute("aria-selected", v === id); });
+  if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+}
+tabs.addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) { show(b.dataset.view); b.scrollIntoView({ block: "nearest", inline: "nearest" }); } });
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+
+/* ---------------------------------------------------------------- 1. camadas */
+function layersInspector(k) {
+  const L = LAYERS[k];
+  const max = 833;
+  const bars = ORDER.map(o => `<div class="bar ${o === k ? "cur" : ""}"><span>${o}</span><i style="--w:${LAYERS[o].lines / max * 100}%;--c:var(--${o})"></i><span>${LAYERS[o].lines}</span></div>`).join("");
+  const imp = L.imports.length ? L.imports.map(i => `<span class="chip">${i}</span>`).join("") : "";
+  $("#insp-layers").innerHTML = `
+    <div class="insp-h">${badge(k)}<h2>${esc(L.folder)}</h2></div>
+    <p>${esc(L.role)}</p>
+    <div class="quote"><b>No restaurante:</b> ${esc(L.rest)}</div>
+    <h3>Pode importar</h3>
+    <div class="chips">${imp || ""}${L.importsNote && (!L.imports.length || k === "port") ? `<span class="svt-s" style="font:400 .88rem var(--font);color:var(--muted)">${esc(L.importsNote)}</span>` : ""}</div>
+    <h3>O que mora aqui</h3><ul>${L.files.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+    ${L.lines ? `<h3>Linhas de Python</h3><div class="bars">${bars}</div>` : ""}
+    <h3>Regra de ouro</h3><p>${esc(L.gold)}</p>`;
+}
+function layersSVG() {
+  const actor = (x, y, w, h, t, s) => `<g class="ring" data-layer="ext" tabindex="0" role="button" aria-label="Mundo externo: ${t}"><rect class="l-ext" x="${x}" y="${y}" width="${w}" height="${h}" rx="9" style="stroke:var(--muted)"/><text class="svt-b" x="${x + w / 2}" y="${y + h / 2 - 3}" text-anchor="middle">${t}</text><text class="svt-s" x="${x + w / 2}" y="${y + h / 2 + 13}" text-anchor="middle">${s}</text></g>`;
+  const ring = (k, x, y, w, h, label) => `<g class="ring" data-layer="${k}" tabindex="0" role="button" aria-label="Camada ${k}" style="color:var(--${k})"><rect class="l-${k}" x="${x}" y="${y}" width="${w}" height="${h}" rx="14"/><text class="svt-b" x="${x + w / 2}" y="${y + 26}" text-anchor="middle" style="fill:var(--${k})">${label}</text></g>`;
+  $("#svg-layers").innerHTML = `
+    <rect class="l-ext" x="1" y="1" width="758" height="468" rx="16" stroke-width="1.2"/>
+    <text class="cap" x="18" y="26">MUNDO EXTERNO</text>
+    ${actor(14, 190, 112, 70, "Clientes NATS", "nats CLI, serviços")}
+    ${actor(634, 190, 112, 70, "Arquivo SQLite", "prompt_vault.db")}
+    ${actor(634, 62, 112, 60, "Terminal", "logs com rich")}
+    ${ring("adapter", 150, 28, 460, 382, "adapter/  ·  traduz e conecta")}
+    ${ring("port", 190, 70, 380, 298, "port/  ·  contratos")}
+    ${ring("app", 228, 110, 304, 214, "app/  ·  casos de uso")}
+    <g class="ring" data-layer="domain" tabindex="0" role="button" aria-label="Camada domain" style="color:var(--domain)">
+      <rect class="l-domain" x="270" y="150" width="220" height="130" rx="14"/>
+      <text class="svt-b" x="380" y="196" text-anchor="middle" style="fill:var(--domain);font-size:16px">domain/</text>
+      <text class="svt" x="380" y="218" text-anchor="middle">Prompt · PromptVersion</text>
+      <text class="svt-s" x="380" y="236" text-anchor="middle">regras · estados · eventos</text>
+      <text class="svt-s" x="380" y="252" text-anchor="middle">Python puro</text></g>
+    <g class="ring" data-layer="infra" tabindex="0" role="button" aria-label="Camada infra" style="color:var(--infra)">
+      <rect class="l-infra" x="150" y="424" width="460" height="32" rx="9"/>
+      <text class="svt-b" x="380" y="444" text-anchor="middle" style="fill:var(--infra)">infra/  ·  configura as tecnologias dos adapters</text></g>
+    <g stroke="var(--muted)" stroke-width="1.6" fill="var(--muted)">
+      <path d="M126 225H146" /><path d="M146 225l-7-4v8z" stroke="none"/>
+      <path d="M610 225H630"/><path d="M630 225l-7-4v8z" stroke="none"/>
+      <path d="M610 92H630"/><path d="M630 92l-7-4v8z" stroke="none"/></g>
+    <text class="svt-s" x="76" y="284" text-anchor="middle">mensagens</text>
+    <text class="svt-s" x="690" y="284" text-anchor="middle">SQL</text>`;
+  const svg = $("#svg-layers");
+  const pick = el => {
+    const g = el.closest("[data-layer]"); if (!g) return;
+    $$(".ring", svg).forEach(r => r.classList.toggle("sel", r === g));
+    layersInspector(g.dataset.layer);
+  };
+  svg.addEventListener("click", e => pick(e.target));
+  svg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e.target); } });
+  $('[data-layer="domain"]', svg).classList.add("sel");
+  layersInspector("domain");
+}
+
+/* ---------------------------------------------------------------- 2. dependencias */
+const NODES = { adapter: [40, 104, 220, 50], infra: [500, 104, 220, 50], app: [40, 204, 220, 50], port: [500, 204, 220, 50], domain: [270, 304, 220, 50] };
+const SUB = { adapter: "messaging · persistence", infra: "settings · db · nats · log", app: "casos de uso", port: "Protocols (contratos)", domain: "o núcleo" };
+const EDGES = [
+  { f: "adapter", t: "infra", d: "M260 129H498", why: "usa o motor do SQLite, o NatsClient e o logging" },
+  { f: "adapter", t: "app", d: "M150 154V202", why: "chama os casos de uso a partir dos handlers" },
+  { f: "adapter", t: "port", d: "M260 146L498 214", why: "implementa os contratos (repositório, unit of work, publicador)" },
+  { f: "adapter", t: "domain", d: "M40 129H16V329H268", why: "o mapper reconstrói o Prompt e as versões" },
+  { f: "app", t: "port", d: "M260 229H498", why: "usa os contratos recebidos pelo construtor" },
+  { f: "app", t: "domain", d: "M200 254L296 302", why: "chama as regras (Prompt, comandos de domínio)" },
+  { f: "port", t: "domain", d: "M560 254L464 302", why: "tipa Prompt e DomainEvent nos contratos" },
+];
+const NOWHY = {
+  domain: "O domain não conhece ninguém. É Python puro: importar algo externo prenderia as regras a uma tecnologia.",
+  port: "O port só enxerga o domain, para tipar Prompt e DomainEvent. Importar o resto inverteria a dependência.",
+  app: "O app orquestra usando contratos (port). Importar adapter ou infra ligaria o caso de uso a uma tecnologia concreta.",
+  infra: "A infra só configura tecnologia e não importa nada do projeto. Quem a usa são os adapters.",
+};
+function depsSVG() {
+  const nodes = Object.entries(NODES).map(([k, [x, y, w, h]]) => `
+    <g class="node" data-node="${k}" tabindex="0" role="button" aria-label="Camada ${k}"><rect class="l-${k}" x="${x}" y="${y}" width="${w}" height="${h}" rx="9"/>
+    <text class="svt-b" x="${x + w / 2}" y="${y + 21}" text-anchor="middle" style="fill:var(--${k});font-size:14px">${k}/</text>
+    <text class="svt-s" x="${x + w / 2}" y="${y + 38}" text-anchor="middle">${SUB[k]}</text></g>`).join("");
+  $("#svg-deps").innerHTML = `
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
+    <text class="svt-s" x="300" y="34">main.py conhece todos: é a raiz de composição</text>
+    ${EDGES.map((e, i) => `<path class="edge" data-e="${i}" d="${e.d}" marker-end="url(#ah)"/>`).join("")}
+    <path class="edge" id="probe" d="" marker-end="url(#ah)" style="display:none"/>
+    <g id="probe-x" style="display:none"><circle r="13" fill="var(--bad)"/><path d="M-5 -5L5 5M5 -5L-5 5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
+    ${nodes}
+    <text class="svt-s" x="380" y="378" text-anchor="middle">Nenhuma seta nasce em domain/</text>`;
+}
+function depsInspector(k) {
+  const outs = EDGES.filter(e => e.f === k), ins = EDGES.filter(e => e.t === k);
+  const li = (list, key, verb) => list.length ? `<ul>${list.map(e => `<li><b>${e[key]}</b>: ${esc(e.why)}</li>`).join("")}</ul>` : `<p>${verb}</p>`;
+  $("#insp-deps").innerHTML = `
+    <div class="insp-h">${badge(k)}<h2>${LAYERS[k].folder}</h2></div>
+    <h3>Importa (setas azuis)</h3>${li(outs, "t", NOWHY[k] || "Pode importar tudo que está abaixo dela.")}
+    <h3>É importada por (setas laranja)</h3>${li(ins, "f", "Ninguém a importa, a não ser o main.py. Ela é a camada mais externa.")}
+    <h3>Regra</h3><p>${esc(LAYERS[k].gold)}</p>`;
+}
+function depsInit() {
+  depsSVG();
+  const svg = $("#svg-deps");
+  const sel = { v: null };
+  const paint = k => {
+    $$(".node", svg).forEach(n => { n.classList.toggle("sel", n.dataset.node === k); n.classList.toggle("faded", !!k && n.dataset.node !== k && !EDGES.some(e => (e.f === k && e.t === n.dataset.node) || (e.t === k && e.f === n.dataset.node))); });
+    $$(".edge[data-e]", svg).forEach(p => { const e = EDGES[p.dataset.e]; p.classList.remove("out", "in", "faded"); if (k) { if (e.f === k) p.classList.add("out"); else if (e.t === k) p.classList.add("in"); else p.classList.add("faded"); } });
+  };
+  const choose = k => { sel.v = k; paint(k); depsInspector(k); };
+  svg.addEventListener("mouseover", e => { const n = e.target.closest(".node"); if (n) { paint(n.dataset.node); depsInspector(n.dataset.node); } });
+  svg.addEventListener("mouseleave", () => paint(sel.v));
+  svg.addEventListener("click", e => { const n = e.target.closest(".node"); if (n) choose(n.dataset.node); });
+  svg.addEventListener("keydown", e => { const n = e.target.closest(".node"); if (n && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); choose(n.dataset.node); } });
+  choose("domain");
+
+  const opts = ORDER.map(k => `<option value="${k}">${k}/</option>`).join("");
+  $("#dep-from").innerHTML = opts; $("#dep-to").innerHTML = opts;
+  $("#dep-from").value = "domain"; $("#dep-to").value = "adapter";
+  const centre = k => { const [x, y, w, h] = NODES[k]; return [x + w / 2, y + h / 2]; };
+  const test = (f, t) => {
+    const probe = $("#probe", svg), cross = $("#probe-x", svg), box = $("#dep-verdict");
+    probe.classList.remove("ok", "no"); cross.style.display = "none";
+    if (f === t) { probe.style.display = "none"; box.className = "verdict"; box.innerHTML = `<b>Mesma camada.</b> Arquivos da mesma pasta podem importar uns aos outros livremente.`; return; }
+    const edge = EDGES.find(e => e.f === f && e.t === t);
+    const [x1, y1] = centre(f), [x2, y2] = centre(t);
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+    const sx = x1 + dx / len * 26, sy = y1 + dy / len * 20, ex = x2 - dx / len * 28, ey = y2 - dy / len * 22;
+    probe.setAttribute("d", `M${sx} ${sy}L${ex} ${ey}`); probe.style.display = "";
+    if (edge) {
+      probe.classList.add("ok"); box.className = "verdict ok";
+      box.innerHTML = `<b class="ok">Permitido.</b> ${f}/ importa ${t}/: ${esc(edge.why)}.`;
+    } else {
+      probe.classList.add("no"); cross.setAttribute("transform", `translate(${(sx + ex) / 2} ${(sy + ey) / 2})`); cross.style.display = ""; box.className = "verdict no";
+      const why = NOWHY[f] || "Não há seta nesse sentido no projeto.";
+      box.innerHTML = `<b class="no">Bloqueado.</b> ${f}/ não pode importar ${t}/. ${esc(why)}`;
+    }
+  };
+  $("#dep-go").addEventListener("click", () => test($("#dep-from").value, $("#dep-to").value));
+  [["domain", "adapter"], ["domain", "infra"], ["app", "adapter"], ["port", "app"], ["infra", "domain"], ["adapter", "domain"]].forEach(([f, t]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.innerHTML = `${f} → ${t}`;
+    b.addEventListener("click", () => { $("#dep-from").value = f; $("#dep-to").value = t; test(f, t); }); $("#dep-quick").append(b);
+  });
+}
+
+/* ---------------------------------------------------------------- 3. uma mensagem */
+const PART = [
+  { k: "ext", t: ["Cliente", "NATS"] }, { k: "adapter", t: ["Messaging", "Adapter"] }, { k: "app", t: ["UpdateContent", "UseCase"] },
+  { k: "domain", t: ["Prompt", "(domain)"] }, { k: "adapter", t: ["UnitOfWork", "+ Repository"] }, { k: "ext", t: ["SQLite", ""] }, { k: "adapter", t: ["NatsEvent", "Publisher"] },
+];
+const STEPS = [
+  { a: 0, b: 1, l: "request prompt.content.update", layer: "adapter", edge: true, group: 1, title: "A mensagem chega",
+    text: "O subject recebe o pedido. O adapter decodifica o JSON, descobre o correlation id (do cabeçalho) e passa a registrá-lo em todos os logs.",
+    code: `nats request prompt.content.update \\\n  '{"prompt_id": "<ID>", "content": "E ai\\nmundo\\nfim"}' \\\n  -H "X-Correlation-Id:meu-rastreio"`,
+    log: "INFO  event_received  subject=prompt.content.update kind=command has_reply=True correlation_id=meu-rastreio" },
+  { a: 1, b: 2, l: "execute(UpdateContentCommand)", layer: "adapter", group: 2, title: "O handler traduz",
+    text: "O handler valida apenas o formato (UUID e texto), monta o comando e pede à factory um caso de uso novo, com sessão própria.",
+    code: `command = UpdateContentCommand(\n    prompt_id=require_uuid(p, "prompt_id"), content=require_str(p, "content")\n)\nreturn {"version_number": await factories.update_content().execute(command)}`,
+    log: "INFO  use_case_started  use_case=UpdateContent correlation_id=meu-rastreio" },
+  { a: 2, b: 4, l: "async with uow · get(prompt_id)", layer: "app", group: 3, title: "A transação abre",
+    text: "O caso de uso abre a transação. O Unit of Work pega a chave de escrita (um asyncio.Lock) e abre uma sessão, para que dois comandos não pisem um no outro.",
+    code: `async with self._uow:\n    prompt = await require_prompt(self._uow.prompts, command.prompt_id)`, log: "" },
+  { a: 4, b: 5, l: "SELECT prompt + versões", layer: "adapter", edge: true, group: 4, title: "O banco é consultado",
+    text: "O repositório lê a linha do prompt e carrega as versões junto (selectinload). Este é o primeiro contato com o SQLite.",
+    code: `select(PromptModel)\n    .where(PromptModel.id == prompt_id)\n    .options(selectinload(PromptModel.versions))`, log: "" },
+  { a: 4, b: 2, l: "Prompt reidratado", ret: true, layer: "adapter", group: 4, title: "O agregado é reconstruído",
+    text: "O mapper traduz linhas em objetos de domínio com Prompt.rehydrate. Ele revalida as invariantes e não emite eventos: reconstituir não é um fato novo.",
+    code: `return Prompt.rehydrate(id=UUID(row.id), name=row.name, status=PromptStatus(row.status),\n    versions=versions, active_version_number=row.active_version_number, ...)`, log: "" },
+  { a: 2, b: 3, l: "add_version(content, activate=True)", layer: "domain", hot: true, group: 5, title: "A regra de negócio roda",
+    text: "O único ponto de decisão. O Prompt recusa se estiver apagado, valida o conteúdo, numera a versão (len + 1), a ativa e registra dois eventos. Nenhuma linha aqui toca em banco ou rede.",
+    code: `version = prompt.add_version(command.content, activate=True)\n# 1. _ensure_not_deleted\n# 2. PromptVersion(...) valida o conteúdo\n# 3. registra PromptVersionAdded\n# 4. activate_version() registra PromptVersionActivated`, log: "" },
+  { a: 2, b: 4, l: "save(prompt) + commit()", layer: "app", group: 6, title: "Salvar e confirmar",
+    text: "O caso de uso pede para salvar o agregado e confirma a transação. O histórico só cresce: o repositório insere apenas as versões novas.",
+    code: `await self._uow.prompts.save(prompt)\nawait self._uow.commit()`, log: "" },
+  { a: 4, b: 5, l: "INSERT versão · UPDATE prompt", layer: "adapter", edge: true, group: 6, title: "O banco grava",
+    text: "Uma linha nova em prompt_versions e a versão ativa atualizada em prompts. As versões antigas permanecem intactas. Ao sair do bloco, a chave de escrita é liberada.",
+    code: `INSERT INTO prompt_versions (...) VALUES (...);\nUPDATE prompts SET active_version_number = ?, updated_at = ? WHERE id = ?;`,
+    log: "INFO  prompt_saved  prompt_id=... versions=4\nINFO  transaction_committed  correlation_id=meu-rastreio" },
+  { a: 2, b: 6, l: "publish(prompt.pull_events())", layer: "app", group: 7, title: "Os eventos saem do domínio",
+    text: "Só depois do commit, o caso de uso entrega os eventos registrados ao publicador. Publicar antes anunciaria algo que poderia nem ter acontecido.",
+    code: `await self._publisher.publish(prompt.pull_events())`, log: "" },
+  { a: 6, b: 0, l: "prompt.events.version_added / version_activated", ret: true, layer: "adapter", edge: true, group: 7, title: "O mundo é avisado",
+    text: "O publicador envia cada evento para prompt.events.<nome>, com o correlation id no cabeçalho. Quem assina prompt.events.> recebe os dois.",
+    code: `prompt.events.version_added      X-Correlation-Id: meu-rastreio\nprompt.events.version_activated  X-Correlation-Id: meu-rastreio`,
+    log: "INFO  event_published  subject=prompt.events.version_added prompt_id=..." },
+  { a: 2, b: 1, l: "número da versão", ret: true, layer: "app", group: 8, title: "O caso de uso devolve",
+    text: "O caso de uso devolve o número da versão criada ao handler, sem saber para quem.", code: `return version.number`,
+    log: "INFO  use_case_completed  use_case=UpdateContent" },
+  { a: 1, b: 0, l: 'reply: {"ok": true, "data": {...}}', ret: true, layer: "adapter", edge: true, group: 8, title: "A resposta volta",
+    text: "O adapter monta o envelope e o publica no endereço de resposta do cliente. O mesmo correlation id volta nele.",
+    code: `{"ok": true, "correlation_id": "meu-rastreio", "data": {"version_number": 4}}`,
+    log: "INFO  reply_sent  ok=True correlation_id=meu-rastreio" },
+];
+const SEQ = { i: 0, timer: null };
+function seqSVG() {
+  const W = 780, step = 109, xs = PART.map((_, i) => 62 + i * step), y0 = 96, gap = 36;
+  const head = PART.map((p, i) => `<g><rect class="l-${p.k}" x="${xs[i] - 49}" y="8" width="98" height="44" rx="8" stroke-width="1.5"/>
+    <text class="svt-b" x="${xs[i]}" y="${p.t[1] ? 27 : 34}" text-anchor="middle" style="font-size:11.5px">${p.t[0]}</text>${p.t[1] ? `<text class="svt-b" x="${xs[i]}" y="41" text-anchor="middle" style="font-size:11.5px">${p.t[1]}</text>` : ""}</g>
+    <line class="lifeline" x1="${xs[i]}" y1="52" x2="${xs[i]}" y2="528"/>`).join("");
+  const arrows = STEPS.map((s, k) => {
+    const y = y0 + k * gap, x1 = xs[s.a], x2 = xs[s.b], dir = x2 > x1 ? 1 : -1, mx = (x1 + x2) / 2;
+    const w = s.l.length * 5.6 + 10;
+    return `<g class="arrow-g future" data-k="${k}" tabindex="0" role="button" aria-label="Passo ${k + 1}: ${esc(s.l)}">
+      <line class="ln" x1="${x1}" y1="${y}" x2="${x2 - dir * 6}" y2="${y}" ${s.ret ? 'stroke-dasharray="5 4"' : ""}/>
+      <path d="M${x2} ${y} l${-dir * 8} -4.5 v9z" fill="currentColor" style="color:var(--muted)"/>
+      <rect x="${mx - w / 2}" y="${y - 17}" width="${w}" height="14" fill="var(--surface)" rx="3"/>
+      <text class="lbl" x="${mx}" y="${y - 6.5}" text-anchor="middle">${esc(s.l)}</text>
+      <circle class="num" cx="${x1 + dir * 11}" cy="${y + 9}" r="7"/><text class="numt" x="${x1 + dir * 11}" y="${y + 12}">${k + 1}</text></g>`;
+  }).join("");
+  $("#svg-seq").innerHTML = `${head}${arrows}<g id="dot" style="transform:translate(${xs[0]}px,${y0}px)"><circle r="6.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/></g>`;
+  SEQ.xs = xs; SEQ.y0 = y0; SEQ.gap = gap;
+}
+function seqGo(i, animate = true) {
+  i = Math.max(0, Math.min(STEPS.length - 1, i)); SEQ.i = i;
+  const s = STEPS[i];
+  $$("#svg-seq .arrow-g").forEach(g => { const k = +g.dataset.k; g.classList.toggle("cur", k === i); g.classList.toggle("done", k < i); g.classList.toggle("future", k > i); });
+  const dot = $("#dot"), y = SEQ.y0 + i * SEQ.gap;
+  if (animate && !reduceMotion) { dot.style.transition = "none"; dot.style.transform = `translate(${SEQ.xs[s.a]}px,${y}px)`; dot.getBoundingClientRect(); dot.style.transition = ""; }
+  dot.style.transform = `translate(${SEQ.xs[s.b]}px,${y}px)`;
+  $("#seq-count").textContent = `passo ${i + 1} de ${STEPS.length}`;
+  $("#seq-prev").disabled = i === 0; $("#seq-next").disabled = i === STEPS.length - 1;
+  const cur = new Set([s.layer]);
+  $("#insp-seq").innerHTML = `
+    <div class="insp-h">${badge(s.layer)}<h2>${i + 1}. ${esc(s.title)}</h2></div>
+    <div class="lay-row">${ORDER.map(k => `<span class="badge b-${k} ${cur.has(k) ? "on" : ""}">${k}</span>`).join("")}${s.edge ? `<span class="badge b-ext on">cruza a fronteira</span>` : `<span class="badge b-ext">interno</span>`}</div>
+    ${s.hot ? `<div class="note hot"><b>Aqui mora a regra de negócio.</b> Compare com os outros passos: este é o único sem NATS, sem SQL e sem JSON.</div>` : ""}
+    <p>${esc(s.text)}</p>
+    <h3>No código</h3><pre class="code">${esc(s.code)}</pre>
+    ${s.log ? `<h3>No log</h3>${s.log.split("\n").map(l => `<div class="logline">${esc(l)}</div>`).join("")}` : ""}`;
+}
+function seqStop() { clearInterval(SEQ.timer); SEQ.timer = null; $("#seq-play").textContent = "Reproduzir"; }
+function seqInit() {
+  seqSVG(); seqGo(0, false);
+  $("#seq-next").onclick = () => { seqStop(); seqGo(SEQ.i + 1); };
+  $("#seq-prev").onclick = () => { seqStop(); seqGo(SEQ.i - 1); };
+  $("#seq-reset").onclick = () => { seqStop(); seqGo(0, false); };
+  $("#seq-play").onclick = () => {
+    if (SEQ.timer) return seqStop();
+    if (SEQ.i >= STEPS.length - 1) seqGo(0, false);
+    $("#seq-play").textContent = "Pausar";
+    SEQ.timer = setInterval(() => { if (SEQ.i >= STEPS.length - 1) return seqStop(); seqGo(SEQ.i + 1); }, 2300);
+  };
+  const svg = $("#svg-seq");
+  const pick = e => { const g = e.target.closest(".arrow-g"); if (g) { seqStop(); seqGo(+g.dataset.k); } };
+  svg.addEventListener("click", pick);
+  svg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e); } });
+}
+
+/* ---------------------------------------------------------------- 4. simulador (the domain rules, in JS) */
+class DomainError extends Error { constructor(name, msg) { super(msg); this.pyName = name; } }
+const Sim = {
+  reset() { this.status = "ACTIVE"; this.versions = [{ n: 1, content: "Ola\nmundo" }]; this.active = 1; this.before = null; this.deletedAt = false; this.events = []; this.emit("PromptCreated", "created"); },
+  emit(name, subj, extra = "") { this.events.unshift({ name, subj, extra }); },
+  guardDeleted(what) { if (this.status === "DELETED") throw new DomainError("PromptDeletedError", `Cannot ${what} a deleted prompt; restore it first`); },
+  transition(target) {
+    const ok = { ACTIVE: ["INACTIVE", "DELETED"], INACTIVE: ["ACTIVE", "DELETED"], DELETED: ["ACTIVE", "INACTIVE"] };
+    if (!ok[this.status].includes(target)) throw new DomainError("InvalidStateTransitionError", `Cannot transition prompt from '${this.status.toLowerCase()}' to '${target.toLowerCase()}'`);
+    this.status = target;
+  },
+  addVersion(content, activate) {
+    this.guardDeleted("add a version to");
+    if (!content.trim()) throw new DomainError("InvalidPromptError", "Version content cannot be blank");
+    const n = this.versions.length + 1; this.versions.push({ n, content });
+    this.emit("PromptVersionAdded", "version_added", `v${n}`);
+    if (activate) this.activateVersion(n);
+    return n;
+  },
+  activateVersion(n) {
+    this.guardDeleted("activate a version of");
+    if (n < 1 || n > this.versions.length) throw new DomainError("VersionNotFoundError", `Version ${n} does not exist in this prompt`);
+    if (n === this.active) return false;
+    const prev = this.active; this.active = n; this.emit("PromptVersionActivated", "version_activated", `v${prev} → v${n}`); return true;
+  },
+  deactivate() { this.guardDeleted("deactivate"); this.transition("INACTIVE"); this.emit("PromptDeactivated", "deactivated"); },
+  reactivate() { this.guardDeleted("reactivate"); this.transition("ACTIVE"); this.emit("PromptReactivated", "reactivated"); },
+  delete() { const prev = this.status; this.transition("DELETED"); this.before = prev; this.deletedAt = true; this.emit("PromptDeleted", "deleted", `era ${prev}`); },
+  restore() {
+    if (this.status !== "DELETED") throw new DomainError("PromptNotDeletedError", "Cannot restore a prompt that is not deleted");
+    const target = this.before || "INACTIVE"; this.transition(target); this.before = null; this.deletedAt = false; this.emit("PromptRestored", "restored", `volta a ${target}`);
+  },
+  diff(a, b) {
+    if (a === b) throw new DomainError("InvalidVersionComparisonError", `Cannot compare version ${a} with itself`);
+    const get = n => { if (n < 1 || n > this.versions.length) throw new DomainError("VersionNotFoundError", `Version ${n} does not exist in this prompt`); return this.versions[n - 1].content; };
+    return lineDiff(get(a), get(b));
+  },
+};
+/* a port of difflib.SequenceMatcher + LineDiffStrategy */
+function lineDiff(oldT, newT) {
+  const split = t => { const l = t.split(/\r?\n/); if (l.length && l[l.length - 1] === "") l.pop(); return l; };
+  const A = split(oldT), B = split(newT), b2j = new Map();
+  B.forEach((x, j) => { if (!b2j.has(x)) b2j.set(x, []); b2j.get(x).push(j); });
+  const longest = (alo, ahi, blo, bhi) => {
+    let bi = alo, bj = blo, bs = 0, j2 = {};
+    for (let i = alo; i < ahi; i++) { const n2 = {}; for (const j of (b2j.get(A[i]) || [])) { if (j < blo) continue; if (j >= bhi) break; const k = (j2[j - 1] || 0) + 1; n2[j] = k; if (k > bs) { bi = i - k + 1; bj = j - k + 1; bs = k; } } j2 = n2; }
+    return [bi, bj, bs];
+  };
+  const q = [[0, A.length, 0, B.length]], blocks = [];
+  while (q.length) { const [alo, ahi, blo, bhi] = q.pop(); const [i, j, k] = longest(alo, ahi, blo, bhi); if (k) { blocks.push([i, j, k]); if (alo < i && blo < j) q.push([alo, i, blo, j]); if (i + k < ahi && j + k < bhi) q.push([i + k, ahi, j + k, bhi]); } }
+  blocks.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  const out = []; let i = 0, j = 0;
+  for (const [ai, bj, size] of [...blocks, [A.length, B.length, 0]]) {
+    const tag = i < ai && j < bj ? "replace" : i < ai ? "delete" : j < bj ? "insert" : "";
+    if (tag) {
+      const paired = tag === "replace" ? Math.min(ai - i, bj - j) : 0;
+      for (let o = 0; o < paired; o++) out.push({ t: "modified", ol: i + o + 1, nl: j + o + 1, ot: A[i + o], nt: B[j + o] });
+      for (let x = i + paired; x < ai; x++) out.push({ t: "removed", ol: x + 1, nl: null, ot: A[x], nt: null });
+      for (let y = j + paired; y < bj; y++) out.push({ t: "added", ol: null, nl: y + 1, ot: null, nt: B[y] });
+    }
+    for (let o = 0; o < size; o++) out.push({ t: "unchanged", ol: ai + o + 1, nl: bj + o + 1, ot: A[ai + o], nt: B[bj + o] });
+    i = ai + size; j = bj + size;
+  }
+  return out;
+}
+const TRANS = { deactivate: ["A", "I"], reactivate: ["I", "A"], deleteA: ["A", "D"], deleteI: ["I", "D"], restoreA: ["D", "A"], restoreI: ["D", "I"] };
+function stateSVG() {
+  const box = (id, x, y, w, h, k, t, sub) => `<g><rect class="st-box l-${k}" id="st-${id}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" stroke-width="1.6"/><text class="svt-b" x="${x + w / 2}" y="${y + h / 2 - 1}" text-anchor="middle">${t}</text><text class="svt-s" x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle">${sub}</text></g>`;
+  const tr = (id, d, dash) => `<path class="tr" id="tr-${id}" d="${d}" marker-end="url(#sah)" ${dash ? 'stroke-dasharray="5 4"' : ""}/>`;
+  $("#svg-state").innerHTML = `
+    <defs><marker id="sah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
+    ${tr("deactivate", "M164 40H356")}${tr("reactivate", "M356 58H164")}
+    ${tr("deleteA", "M52 74L190 130")}${tr("deleteI", "M468 74L330 130")}
+    ${tr("restoreA", "M212 112L136 76", true)}${tr("restoreI", "M308 112L384 76", true)}
+    <text class="trl" id="tl-deactivate" x="260" y="34" text-anchor="middle">deactivate()</text><text class="trl" id="tl-reactivate" x="260" y="74" text-anchor="middle">reactivate()</text>
+    <text class="trl" id="tl-deleteA" x="86" y="116" text-anchor="end">delete()</text><text class="trl" id="tl-deleteI" x="434" y="116">delete()</text>
+    <text class="trl" id="tl-restoreA" x="186" y="100">restore()</text><text class="trl" id="tl-restoreI" x="334" y="100" text-anchor="end">restore()</text>
+    ${box("A", 20, 24, 144, 50, "port", "ACTIVE", "em uso")}${box("I", 356, 24, 144, 50, "app", "INACTIVE", "desligado")}${box("D", 190, 112, 140, 46, "domain", "DELETED", "soft delete")}`;
+}
+let simShown = { v: 0 };
+function simRender(lastAction) {
+  const S = Sim, key = { ACTIVE: "A", INACTIVE: "I", DELETED: "D" }[S.status];
+  ["A", "I", "D"].forEach(k => $("#st-" + k).classList.toggle("cur", k === key));
+  const can = { deactivate: key === "A", reactivate: key === "I", deleteA: key === "A", deleteI: key === "I", restoreA: key === "D" && (S.before || "INACTIVE") === "ACTIVE", restoreI: key === "D" && (S.before || "INACTIVE") === "INACTIVE" };
+  Object.keys(can).forEach(k => { $("#tr-" + k).classList.toggle("can", can[k]); $("#tl-" + k).classList.toggle("can", can[k]); });
+  const grew = S.versions.length > simShown.v; simShown.v = S.versions.length;
+  $("#sim-versions").innerHTML = S.versions.map(v => `<button class="vcard ${v.n === S.active ? "act" : ""} ${grew && v.n === S.versions.length ? "new" : ""}" type="button" data-n="${v.n}" aria-label="Ativar versão ${v.n}">
+    <div class="vn"><span>v${v.n}</span>${v.n === S.active ? '<span class="badge b-port">ATIVA</span>' : ""}</div><pre>${esc(v.content)}</pre></button>`).join("");
+  const sel = n => S.versions.map(v => `<option value="${v.n}" ${v.n === n ? "selected" : ""}>v${v.n}</option>`).join("");
+  const ca = +$("#cmp-a").value || 1, cb = +$("#cmp-b").value || Math.min(2, S.versions.length);
+  $("#cmp-a").innerHTML = sel(ca); $("#cmp-b").innerHTML = sel(cb);
+  $("#insp-sim").innerHTML = `
+    <div class="insp-h"><span class="badge b-domain">Prompt</span><h2>Estado interno</h2></div>
+    <dl class="kv">
+      <dt>status</dt><dd>${S.status}</dd><dt>versão ativa</dt><dd>${S.active === null ? "nenhuma" : "v" + S.active}</dd>
+      <dt>versões</dt><dd>${S.versions.length} (nunca diminui)</dd><dt>status_before_deletion</dt><dd>${S.before || "None"}</dd>
+      <dt>deleted_at</dt><dd>${S.deletedAt ? "preenchido" : "None"}</dd>
+      <dt>em uso (is_in_use)</dt><dd>${S.status === "ACTIVE" && S.active !== null ? "sim" : "não"}</dd></dl>
+    <h3>Eventos registrados (mais recente primeiro)</h3>
+    <ul class="evlog">${S.events.map(e => `<li><b>${e.name}</b> ${e.extra ? `<span>${esc(e.extra)}</span>` : ""}<br><span>→ prompt.events.${e.subj}</span></li>`).join("")}</ul>
+    <h3>Como ler</h3><p>No sistema real, o caso de uso chama <code>pull_events()</code> depois do commit e o adapter publica cada evento no NATS.</p>`;
+}
+function simInit() {
+  stateSVG(); Sim.reset();
+  const acts = [
+    ["Nova versão", "add_version(activate=False)", () => Sim.addVersion($("#sim-content").value, false)],
+    ["Alterar conteúdo", "add_version(activate=True)", () => Sim.addVersion($("#sim-content").value, true)],
+    ["Desativar", "deactivate()", () => Sim.deactivate()], ["Reativar", "reactivate()", () => Sim.reactivate()],
+    ["Apagar", "delete()", () => Sim.delete()], ["Restaurar", "restore()", () => Sim.restore()],
+  ];
+  const box = $("#sim-actions");
+  acts.forEach(([label, call, fn]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.innerHTML = `${label} <small>${call}</small>`;
+    b.addEventListener("click", () => run(label, call, fn)); box.append(b);
+  });
+  const reset = document.createElement("button"); reset.type = "button"; reset.className = "btn"; reset.textContent = "↺ Novo prompt";
+  reset.addEventListener("click", () => { Sim.reset(); simShown.v = 0; $("#cmp-out").innerHTML = ""; setResult("ok", "Novo prompt criado: ACTIVE, com a versão 1 ativa.", "evento PromptCreated"); simRender(); }); box.append(reset);
+  const setResult = (cls, html, mono) => { const r = $("#sim-result"); r.className = "result " + cls; r.innerHTML = html + (mono ? `<span class="mono">${esc(mono)}</span>` : ""); };
+  function run(label, call, fn) {
+    try {
+      const before = Sim.events.length; fn();
+      const made = Sim.events.slice(0, Sim.events.length - before).map(e => e.name);
+      setResult("ok", `<b>${esc(label)}</b>: ${made.length ? "ok. Eventos: " + made.reverse().join(", ") + "." : "ok, mas nada mudou (já era a versão ativa)."}`, `{"ok": true, "correlation_id": "...", "data": ...}`);
+    } catch (e) {
+      if (!(e instanceof DomainError)) throw e;
+      setResult("err", `<b>${esc(label)}</b> falhou com <b>${e.pyName}</b>: ${esc(e.message)}`, `{"ok": false, "error": {"code": "domain_error", "message": "${e.message}"}}`);
+    }
+    simRender();
+  }
+  $("#sim-versions").addEventListener("click", e => { const c = e.target.closest("[data-n]"); if (c) run(`Ativar v${c.dataset.n}`, "", () => Sim.activateVersion(+c.dataset.n)); });
+  $("#cmp-go").addEventListener("click", () => {
+    const out = $("#cmp-out");
+    try {
+      const d = Sim.diff(+$("#cmp-a").value, +$("#cmp-b").value);
+      const n = t => d.filter(x => x.t === t).length;
+      out.innerHTML = `<div class="chips" style="margin-bottom:8px"><span class="chip">${n("added")} adicionadas</span><span class="chip">${n("removed")} removidas</span><span class="chip">${n("modified")} modificadas</span><span class="chip">has_changes: ${d.some(x => x.t !== "unchanged")}</span></div>
+        <div class="scroll"><table class="diff"><thead><tr><th>tipo</th><th>antiga</th><th>nova</th><th>texto antigo</th><th>texto novo</th></tr></thead><tbody>${d.map(x => `<tr><td class="dt ${x.t}">${x.t}</td><td>${x.ol ?? "·"}</td><td>${x.nl ?? "·"}</td><td>${x.ot === null ? "·" : esc(x.ot)}</td><td>${x.nt === null ? "·" : esc(x.nt)}</td></tr>`).join("")}</tbody></table></div>`;
+    } catch (e) {
+      if (!(e instanceof DomainError)) throw e;
+      out.innerHTML = `<div class="result err"><b>${e.pyName}</b>: ${esc(e.message)}<span class="mono">{"ok": false, "error": {"code": "domain_error", ...}}</span></div>`;
+    }
+  });
+  setResult("", "Aguardando uma ação. Tente <b>Restaurar</b> agora: o prompt está ativo, então o domínio deve recusar.");
+  simRender();
+}
+
+/* ---------------------------------------------------------------- 5. subjects */
+const SUBJECTS = [
+  { s: "prompt.create", k: "command", uc: "CreatePrompt", call: "Prompt.create(name, content)", ret: "prompt_id", ev: ["created"], p: '{"name":"saudacao","content":"Ola\\nmundo"}', need: false, errs: ["InvalidPromptError: nome ou conteúdo em branco"] },
+  { s: "prompt.version.create", k: "command", uc: "CreateVersion", call: "prompt.add_version(content, activate=…)", ret: "version_number", ev: ["version_added", "version_activated (se activate)"], p: '{"prompt_id":"<ID>","content":"Oi\\nmundo","activate":false}', need: true, errs: ["PromptDeletedError", "InvalidPromptError: conteúdo em branco"] },
+  { s: "prompt.content.update", k: "command", uc: "UpdateContent", call: "prompt.add_version(content, activate=True)", ret: "version_number", ev: ["version_added", "version_activated"], p: '{"prompt_id":"<ID>","content":"E ai\\nmundo\\nfim"}', need: true, errs: ["PromptDeletedError", "InvalidPromptError: conteúdo em branco"] },
+  { s: "prompt.version.activate", k: "command", uc: "ActivateVersion", call: "prompt.activate_version(n)", ret: "nada (data: null)", ev: ["version_activated (se mudou)"], p: '{"prompt_id":"<ID>","version_number":1}', need: true, errs: ["VersionNotFoundError", "PromptDeletedError"] },
+  { s: "prompt.delete", k: "command", uc: "DeletePrompt", call: "prompt.delete()", ret: "nada (data: null)", ev: ["deleted"], p: '{"prompt_id":"<ID>"}', need: true, errs: ["InvalidStateTransitionError: já está apagado"] },
+  { s: "prompt.restore", k: "command", uc: "RestorePrompt", call: "prompt.restore()", ret: "nada (data: null)", ev: ["restored"], p: '{"prompt_id":"<ID>"}', need: true, errs: ["PromptNotDeletedError: o prompt não está apagado"] },
+  { s: "prompt.get", k: "query", uc: "GetPrompt", call: "repositório → get(id)", ret: "o prompt, com todas as versões", ev: [], p: '{"prompt_id":"<ID>"}', need: true, errs: [] },
+  { s: "prompt.versions.list", k: "query", uc: "ListVersions", call: "prompt.versions", ret: "a lista de versões", ev: [], p: '{"prompt_id":"<ID>"}', need: true, errs: [] },
+  { s: "prompt.list.active", k: "query", uc: "ListActivePrompts", call: "repositório → list_active()", ret: "lista de prompts (resumo)", ev: [], p: "{}", need: false, errs: [] },
+  { s: "prompt.list.deleted", k: "query", uc: "ListDeletedPrompts", call: "repositório → list_deleted()", ret: "lista de prompts (resumo)", ev: [], p: "{}", need: false, errs: [] },
+  { s: "prompt.versions.compare", k: "query", uc: "CompareVersions", call: "prompt.diff(a, b, strategy)", ret: "o VersionDiff (entradas, contadores, algoritmo)", ev: [], p: '{"prompt_id":"<ID>","from_version":1,"to_version":3}', need: true, errs: ["InvalidVersionComparisonError: mesma versão", "VersionNotFoundError"] },
+];
+const SUBS = { f: "all", sel: "prompt.create" };
+async function copyText(text, btn) {
+  const done = ok => { const old = btn.textContent; btn.textContent = ok ? "Copiado" : "Selecione e copie (Ctrl+C)"; setTimeout(() => btn.textContent = old, 1600); };
+  try { await navigator.clipboard.writeText(text); done(true); }
+  catch { const pre = btn.closest(".insp").querySelector("pre.code"); const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); done(false); }
+}
+function subInspector() {
+  const x = SUBJECTS.find(v => v.s === SUBS.sel);
+  const cmd = x.k === "query" || true ? `nats request ${x.s} '${x.p}' --raw` : "";
+  const codes = ["invalid_payload (JSON ruim, campo ausente, UUID mal formado)"].concat(x.need ? ["not_found (o prompt não existe)"] : [], x.errs.length ? [`domain_error (${x.errs.join("; ")})`] : [], ["timeout", "internal_error"]);
+  $("#insp-sub").innerHTML = `
+    <div class="insp-h"><span class="badge ${x.k === "command" ? "b-domain" : "b-port"}">${x.k}</span><h2 class="mono" style="font-size:.95rem">${x.s}</h2></div>
+    <p>${x.k === "command" ? "Assíncrono: executa sem esperar. Se a mensagem trouxer um endereço de resposta, ele também responde. Se falhar sem resposta, o erro vai para <code>prompt.errors</code>." : "Pedido e resposta: quem pergunta espera. Sem endereço de resposta, a mensagem é ignorada."}</p>
+    <h3>Cadeia</h3><ul><li>adapter: <code>${x.s}</code></li><li>app: <b>${x.uc}</b>UseCase</li><li>${x.k === "command" ? "domain" : "domain / port"}: <code>${esc(x.call)}</code></li></ul>
+    <h3>Devolve em <code>data</code></h3><p>${esc(x.ret)}</p>
+    <h3>Eventos publicados</h3>${x.ev.length ? `<div class="chips">${x.ev.map(e => `<span class="chip mono">prompt.events.${esc(e)}</span>`).join("")}</div>` : "<p>Nenhum: consultas não alteram nada.</p>"}
+    <h3>Erros possíveis (campo <code>error.code</code>)</h3><ul>${codes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+    <h3>Experimente</h3><pre class="code">${esc(cmd)}</pre>
+    <div class="row"><button class="btn" id="sub-copy" type="button">Copiar comando</button><span class="svt-s" style="font:400 .8rem var(--font);color:var(--muted)">${x.need ? "Troque &lt;ID&gt; pelo prompt_id de um prompt criado." : "Não precisa de ID."}</span></div>`;
+  $("#sub-copy").onclick = e => copyText(cmd, e.currentTarget);
+}
+function subRender() {
+  $("#sub-filters").innerHTML = [["all", "Todos"], ["command", "Commands"], ["query", "Queries"]].map(([k, l]) => `<button class="fbtn" type="button" data-f="${k}" aria-pressed="${SUBS.f === k}">${l}</button>`).join("");
+  $("#sub-rows").innerHTML = SUBJECTS.filter(x => SUBS.f === "all" || x.k === SUBS.f).map(x => `
+    <button class="map-row ${x.k} ${x.s === SUBS.sel ? "sel" : ""}" type="button" data-s="${x.s}">
+      <div class="mono">${x.s}<span class="sub">${x.k}${x.need ? " · precisa de prompt_id" : ""}</span></div>
+      <div><b>${x.uc}</b>UseCase<span class="sub">${x.k === "command" ? "escreve" : "só lê"}</span></div>
+      <div class="mono">${esc(x.call)}<span class="sub">→ ${esc(x.ret)}</span></div></button>`).join("");
+  subInspector();
+}
+function subInit() {
+  subRender();
+  $("#sub-filters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b) { SUBS.f = b.dataset.f; subRender(); } });
+  $("#sub-rows").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) { SUBS.sel = b.dataset.s; subRender(); } });
+}
+
+/* ---------------------------------------------------------------- 6. montagem (main.py) */
+const WN = {
+  settings: [10, 20, 130, 46, "infra", "Settings", "from_env()"], engine: [10, 100, 130, 46, "infra", "engine", "SQLite + WAL"], sf: [170, 100, 150, 46, "infra", "session_factory", "async_sessionmaker"],
+  nats: [10, 190, 130, 46, "infra", "NatsClient", "connect()"], pub: [170, 190, 150, 46, "adapter", "NatsEventPublisher", "EventPublisher"],
+  lock: [350, 100, 130, 46, "adapter", "write_lock", "asyncio.Lock"], reader: [350, 20, 150, 46, "adapter", "reader", "SessionPerCall…Repo"], strat: [350, 262, 130, 46, "domain", "LineDiffStrategy", "DiffStrategy"],
+  fac: [530, 100, 150, 66, "app", "UseCaseFactories", "11 lambdas, 1 por caso"], mad: [530, 276, 150, 46, "adapter", "MessagingAdapter", "subscribe × 11"],
+  routes: [530, 196, 150, 44, "adapter", "build_routes()", "subject → handler"],
+};
+const WE = [["settings", "engine"], ["engine", "sf"], ["sf", "reader"], ["sf", "lock"], ["nats", "pub"], ["lock", "fac"], ["pub", "fac"], ["reader", "fac"], ["strat", "fac"], ["fac", "routes"], ["routes", "mad"], ["nats", "mad"]];
+const WSTEPS = [
+  { t: "Logging e settings", nodes: ["settings"], code: `settings = Settings.from_env()\nconfigure_logging(settings.log_level)\nlog = get_logger("main")`, why: "Antes de qualquer coisa, para registrar tudo que vier depois. As variáveis de ambiente (NATS_URL, DATABASE_URL, LOG_LEVEL, HANDLER_TIMEOUT_SECONDS) são lidas aqui." },
+  { t: "Motor SQLite e tabelas", nodes: ["engine", "sf"], code: `engine = create_engine(settings.database_url)\nawait init_db(engine)\nsession_factory = create_session_factory(engine)`, why: "O banco precisa existir antes da primeira mensagem. O motor aplica WAL, foreign_keys e busy_timeout, e a fábrica de sessões é o que cada Unit of Work usará." },
+  { t: "Conexão com o NATS", nodes: ["nats"], code: `nats_client = NatsClient(settings)\nawait nats_client.connect()`, why: "Se a conexão falhar, o programa registra o erro (nats_connection_failed), libera o banco e encerra com código 1." },
+  { t: "Peças compartilhadas", nodes: ["pub", "lock", "reader", "strat"], code: `publisher = NatsEventPublisher(nats_client)\nwrite_lock = asyncio.Lock()\nreader = SessionPerCallPromptRepository(session_factory)\ndiff_strategy = LineDiffStrategy()`, why: "Estas quatro peças são compartilhadas por todas as mensagens. O write_lock é a chave única que evita atualizações perdidas." },
+  { t: "Factories dos casos de uso", nodes: ["fac"], code: `def uow() -> SqlAlchemyUnitOfWork:\n    return SqlAlchemyUnitOfWork(session_factory, write_lock)\n\nfactories = UseCaseFactories(\n    create_prompt=lambda: CreatePromptUseCase(uow(), publisher),\n    ...\n    compare_versions=lambda: CompareVersionsUseCase(reader, diff_strategy),\n)`, why: "Cada lambda fabrica um caso de uso novo, com Unit of Work e sessão próprios, a cada mensagem. Uma sessão de banco não pode ser compartilhada por mensagens simultâneas." },
+  { t: "Iniciar o adapter", nodes: ["routes", "mad"], code: `adapter = MessagingAdapter(\n    nats_client, build_routes(factories), settings.handler_timeout_seconds\n)\nawait adapter.start()`, why: "A partir daqui o serviço atende: 11 subjects assinados, cada um ligado ao seu handler por uma Route." },
+  { t: "Esperar e encerrar limpo", nodes: [], teardown: true, code: `await stop.wait()      # SIGINT ou SIGTERM\nawait adapter.stop()   # cancela as assinaturas\nawait nats_client.close()  # drain: termina o que está em andamento\nawait engine.dispose()`, why: "No encerramento, a ordem é inversa: primeiro para de receber mensagens, depois drena o NATS e por fim fecha o banco." },
+];
+const WIRE = { i: 0 };
+function wireInit() {
+  const nodeSVG = Object.entries(WN).map(([k, [x, y, w, h, l, t, s]]) => `<g class="wnode hid" data-n="${k}"><rect class="l-${l}" x="${x}" y="${y}" width="${w}" height="${h}" rx="8" stroke-width="1.6"/><text class="svt-b" x="${x + w / 2}" y="${y + h / 2 - 2}" text-anchor="middle" style="font-size:12px">${t}</text><text class="svt-s" x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle" style="font-size:10px">${s}</text></g>`).join("");
+  const cx = (k, side) => { const [x, y, w, h] = WN[k]; return side === "r" ? [x + w, y + h / 2] : side === "l" ? [x, y + h / 2] : side === "t" ? [x + w / 2, y] : [x + w / 2, y + h]; };
+  const edgeSVG = WE.map(([a, b], i) => {
+    const A = WN[a], B = WN[b]; let p1, p2;
+    if (Math.abs(A[1] - B[1]) < 40 || B[0] > A[0] + A[2] - 1) { p1 = cx(a, "r"); p2 = cx(b, "l"); } else if (B[1] > A[1]) { p1 = cx(a, "b"); p2 = cx(b, "t"); } else { p1 = cx(a, "t"); p2 = cx(b, "b"); }
+    if (a === "settings" && b === "engine") { p1 = cx(a, "b"); p2 = cx(b, "t"); }
+    if (a === "nats" && b === "mad") { return `<path class="wedge hid" data-e="${a}-${b}" d="M140 213H156V340H605V324" marker-end="url(#wah)"/>`; }
+    if (a === "sf" && b === "reader") { return `<path class="wedge hid" data-e="${a}-${b}" d="M320 112L350 50" marker-end="url(#wah)"/>`; }
+    if (a === "sf" && b === "lock") { return `<path class="wedge hid" data-e="${a}-${b}" d="M320 123H348" marker-end="url(#wah)"/>`; }
+    return `<path class="wedge hid" data-e="${a}-${b}" d="M${p1[0]} ${p1[1]}L${p2[0]} ${p2[1]}" marker-end="url(#wah)"/>`;
+  }).join("");
+  $("#svg-wire").innerHTML = `<defs><marker id="wah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
+    ${edgeSVG}${nodeSVG}<text class="svt-s" x="10" y="356">As setas leem como “é entregue a”. As cores são as das camadas.</text>`;
+  $("#wire-steps").innerHTML = WSTEPS.map((s, i) => `<button class="wstep" type="button" data-i="${i}" aria-pressed="false"><b>${i + 1}</b><span>${s.t}</span></button>`).join("");
+  $("#wire-steps").addEventListener("click", e => { const b = e.target.closest("[data-i]"); if (b) wireGo(+b.dataset.i); });
+  wireGo(0);
+}
+function wireGo(i) {
+  WIRE.i = i;
+  const made = new Set(WSTEPS.slice(0, i + 1).flatMap(s => s.nodes)), fresh = new Set(WSTEPS[i].nodes), all = WSTEPS[i].teardown;
+  $$("#svg-wire .wnode").forEach(n => { const k = n.dataset.n; n.classList.toggle("hid", !(all || made.has(k))); n.classList.toggle("new", fresh.has(k)); });
+  $$("#svg-wire .wedge").forEach(p => { const [a, b] = p.dataset.e.split("-"); p.classList.toggle("hid", !(all || (made.has(a) && made.has(b)))); });
+  $$("#wire-steps .wstep").forEach(b => b.setAttribute("aria-pressed", +b.dataset.i === i));
+  const s = WSTEPS[i];
+  $("#insp-wire").innerHTML = `
+    <div class="insp-h"><span class="badge b-ext">passo ${i + 1} de ${WSTEPS.length}</span><h2>${esc(s.t)}</h2></div>
+    <p>${esc(s.why)}</p><h3>Em src/main.py</h3><pre class="code">${esc(s.code)}</pre>
+    ${s.teardown ? '<div class="note">O grafo continua inteiro na tela porque, no encerramento, todas as peças são desmontadas, da borda para dentro.</div>' : ""}
+    <div class="row"><button class="btn" id="wire-prev" type="button" ${i === 0 ? "disabled" : ""}>◀ Anterior</button><button class="btn pri" id="wire-next" type="button" ${i === WSTEPS.length - 1 ? "disabled" : ""}>Próximo ▶</button></div>`;
+  $("#wire-prev").onclick = () => wireGo(i - 1); $("#wire-next").onclick = () => wireGo(i + 1);
+}
+
+/* ---------------------------------------------------------------- boot */
+layersSVG(); depsInit(); seqInit(); simInit(); subInit(); wireInit();
+show(location.hash.slice(1) || "camadas");
+</script>
