@@ -4,14 +4,13 @@ import { activeVersion, type PromptItem } from "../types";
 interface Props {
   prompt: PromptItem;
   onTimeline: (prompt: PromptItem) => void;
-  onCompare: (prompt: PromptItem) => void;
   onDetails: (prompt: PromptItem) => void;
 }
 
 const iconButton =
   "inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-indigo-50 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300";
 
-export default function PromptCard({ prompt, onTimeline, onCompare, onDetails }: Props) {
+export default function PromptCard({ prompt, onTimeline, onDetails }: Props) {
   const active = activeVersion(prompt);
 
   return (
@@ -46,11 +45,7 @@ export default function PromptCard({ prompt, onTimeline, onCompare, onDetails }:
             <History className="size-5" />
           </a>
           <a
-            href={`/prompts/${prompt.id}/compare`}
-            onClick={(event) => {
-              event.preventDefault();
-              onCompare(prompt);
-            }}
+            href={`#/compare/${prompt.id}`}
             aria-label={`Comparar versões de ${prompt.name}`}
             title="Comparar versões"
             className={iconButton}

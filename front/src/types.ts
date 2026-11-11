@@ -6,6 +6,8 @@ export type PromptResponse = Schemas["PromptResponse"];
 export type PromptDetailResponse = Schemas["PromptDetailResponse"];
 export type PromptVersionResponse = Schemas["PromptVersionResponse"];
 export type CreatePromptRequest = Schemas["CreatePromptRequest"];
+export type VersionDiffResponse = Schemas["VersionDiffResponse"];
+export type DiffLineResponse = Schemas["DiffLineResponse"];
 
 /** A prompt as shown on the dashboard: the summary plus its versions, when they could be loaded. */
 export type PromptItem = Omit<PromptResponse, "content"> & {

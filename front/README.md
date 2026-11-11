@@ -31,7 +31,18 @@ npm run gen:api
 The Axios service layer is in `src/api/` (`client.ts` normalizes the gateway's `{error: {code, message}}`,
 `prompts.ts` wraps the endpoints).
 
+## Screens
+
+| Route | Screen |
+|---|---|
+| `#/` | Prompt list: search, create, details (copy, edit = new version) |
+| `#/compare` | Version comparison: pick a prompt, then base (before) and compared (after) |
+| `#/compare/{promptId}` | Same, with the prompt already selected (the compare icon on each card) |
+
+The comparison calls `POST /prompts/{id}/compare`. The core returns the line diff, so the front only
+renders it (`DiffViewer`): split or unified view, additions in green, removals in red, no diff library.
+Routing is a tiny hash router in `App.tsx` (no extra dependency).
+
 ## Scope
 
-Implemented: prompt list with search, create modal, details modal (copy, edit = new version), toasts, light/dark theme.
-The timeline and version comparison screens are not part of this iteration; their icons only show a notice.
+Not part of this iteration: the timeline screen (its icon only shows a notice).
