@@ -1,8 +1,103 @@
-# Course Environment
+# Prompt Vault
+
+Versioned prompt management. Two services that talk over [NATS](https://nats.io/):
+
+```text
+HTTP client → api (FastAPI) ──NATS request/reply──▶ core (hexagonal, SQLite)
+```
+
+| Folder | Role | Docs |
+|---|---|---|
+| [`core/`](core) | Domain and use cases (create, version, activate, compare, soft delete). Listens on NATS subjects and persists in SQLite. | [`core/CLAUDE.md`](core/CLAUDE.md) |
+| [`api/`](api) | HTTP gateway. Validates input, sends one NATS message per use case and returns the Core's `data` as is. | [`api/CLAUDE.md`](api/CLAUDE.md) |
+
+## Quick start
+
+Requirements: Docker, `uv` and Python 3.13 (see [Environment setup](#environment-setup)).
+
+```bash
+# 1. NATS
+cd core && docker compose up -d
+
+# 2. Core (terminal 1)
+cd core && uv sync && uv run src/main.py
+
+# 3. API (terminal 2)
+cd api && uv sync && uv run uvicorn main:app --reload
+```
+
+Swagger UI: http://localhost:8000/docs · ReDoc: http://localhost:8000/redoc
+
+The API fails at startup if NATS is down. Without the Core running, calls return `503 CORE_UNAVAILABLE` or `504 CORE_TIMEOUT`.
+
+| Variable | Used by | Default |
+|---|---|---|
+| `NATS_URL` | core, api | `nats://localhost:4222` |
+| `DATABASE_URL` | core | `sqlite+aiosqlite:///./prompt_vault.db` |
+| `LOG_LEVEL` | core, api | `INFO` |
+| `HANDLER_TIMEOUT_SECONDS` | core | `5` |
+
+## API
+
+Every success returns **HTTP 200** with the Core's `data` as the body (an object, or an array for listings). Swagger documents the expected DTOs (`PromptResponse`, `PromptVersionResponse`, `PromptDetailResponse`, `VersionDiffResponse`) but does not validate or reshape the response.
+
+| Method | Route | Use case | NATS subject |
+|---|---|---|---|
+| POST | `/prompts` | create prompt | `prompt.create` |
+| GET | `/prompts/active` | list active prompts | `prompt.list.active` |
+| GET | `/prompts/deleted` | list deleted prompts | `prompt.list.deleted` |
+| GET | `/prompts/{prompt_id}` | get prompt with versions | `prompt.get` |
+| DELETE | `/prompts/{prompt_id}` | soft delete | `prompt.delete` |
+| POST | `/prompts/{prompt_id}/recover` | recover | `prompt.restore` |
+| POST | `/prompts/{prompt_id}/versions` | add version | `prompt.version.create` |
+| GET | `/prompts/{prompt_id}/versions` | list versions | `prompt.versions.list` |
+| PUT | `/prompts/{prompt_id}/content` | update content | `prompt.content.update` |
+| POST | `/prompts/{prompt_id}/activate` | activate version | `prompt.version.activate` |
+| POST | `/prompts/{prompt_id}/compare` | compare two versions | `prompt.versions.compare` |
+
+### Errors
+
+Always JSON, never a stack trace (it stays in the logs):
+
+```json
+{ "error": { "code": "PROMPT_NOT_FOUND", "message": "Prompt 123 não encontrado", "details": {} } }
+```
+
+| HTTP | Codes |
+|---|---|
+| 404 | `PROMPT_NOT_FOUND`, `VERSION_NOT_FOUND` |
+| 409 | `PROMPT_ALREADY_DELETED`, `PROMPT_NOT_DELETED`, `DOMAIN_RULE_VIOLATION` |
+| 422 | `INVALID_REQUEST` (invalid body, UUID or core payload), `INVALID_VERSION_COMPARISON` |
+| 502 | `CORE_RESPONSE_ERROR` |
+| 503 | `NATS_PUBLISH_FAILED`, `CORE_UNAVAILABLE` |
+| 504 | `CORE_TIMEOUT` |
+| 500 | `INTERNAL_SERVER_ERROR` |
+
+## API layout
+
+```text
+api/
+  main.py          # app, NATS lifespan, handler registration
+  controllers/     # FastAPI router, no business logic
+  services/        # PromptService: one NATS message per use case
+  messaging/       # NATSPublisher, the only module that imports nats-py
+  models/          # request DTOs, response DTOs and ApiWrapper[T]
+  utils/           # exceptions, error handlers, json helpers, logging
+  tests/
+```
+
+## Tests
+
+```bash
+cd api  && uv run pytest        # unit tests, NATS mocked, no network
+cd core && ./smoke_test.sh      # needs NATS and the core running
+```
+
+## Environment setup
 
 Everything on Ubuntu: Cursor, Docker Engine, uv, Python 3.13, NATS CLI 0.3.1, and Node.js 22.
 
-## Cursor
+### Cursor
 
 ```bash
 curl -fsSL https://downloads.cursor.com/keys/anysphere.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/cursor.gpg > /dev/null
@@ -11,7 +106,7 @@ sudo apt update
 sudo apt install cursor
 ```
 
-## Docker Engine
+### Docker Engine
 
 ```bash
 sudo apt update
@@ -33,7 +128,7 @@ docker --version
 docker compose version
 ```
 
-## uv and Python 3.13
+### uv and Python 3.13
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -43,7 +138,7 @@ uv python install 3.13
 uv run --python 3.13 python --version
 ```
 
-## NATS CLI 0.3.1
+### NATS CLI 0.3.1
 
 ```bash
 sudo apt install -y unzip
@@ -57,7 +152,7 @@ source ~/.bashrc
 nats --version
 ```
 
-## Node.js 22
+### Node.js 22
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
@@ -67,7 +162,7 @@ node --version
 npm --version
 ```
 
-## Checklist
+### Checklist
 
 ```bash
 uv --version
