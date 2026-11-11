@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from domain import DiffStrategy, VersionDiff
+from domain import DiffStrategy, Prompt, VersionDiff
 from port import PromptRepository
 
 from .._helpers import require_prompt
@@ -19,6 +19,6 @@ class CompareVersionsUseCase:
         self._prompts = prompts
         self._strategy = strategy
 
-    async def execute(self, query: CompareVersionsQuery) -> VersionDiff:
+    async def execute(self, query: CompareVersionsQuery) -> tuple[Prompt, VersionDiff]:
         prompt = await require_prompt(self._prompts, query.prompt_id)
-        return prompt.diff(query.from_version, query.to_version, self._strategy)
+        return prompt, prompt.diff(query.from_version, query.to_version, self._strategy)

@@ -71,3 +71,16 @@ src/
 - Never commit files containing secrets
 - Never modify the /config layer
 - Never delete failing unit tests
+
+## Messaging contract
+
+Replies are `{"ok": true, "correlation_id", "data"}` or `{"ok": false, "correlation_id", "error": {"code", "message"}, "subject"}`.
+`data` mirrors the API response DTOs (see `adapter/messaging/serializers.py`; the API's `models/response_models.py` is the reference):
+
+- `prompt.create`, `prompt.version.activate`, `prompt.delete`, `prompt.restore` -> `PromptResponse` (`content` only on create)
+- `prompt.version.create`, `prompt.content.update` -> `PromptVersionResponse`
+- `prompt.get` -> `PromptDetailResponse`
+- `prompt.versions.list` -> array of `PromptVersionResponse`; `prompt.list.active` / `prompt.list.deleted` -> array of `PromptResponse`
+- `prompt.versions.compare` -> `VersionDiffResponse` (a MODIFIED diff entry becomes a `removed` line plus an `added` line)
+
+Error codes: `invalid_payload`, `not_found`, `version_not_found`, `invalid_version_comparison`, `prompt_deleted`, `prompt_not_deleted`, `invalid_prompt`, `domain_error` (other rules), `timeout`, `internal_error`. Use cases return the aggregate; only the adapter builds JSON.

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from domain import Prompt, PromptVersion
 from port import EventPublisher, UnitOfWork
 
 from .._helpers import require_prompt
@@ -17,7 +18,7 @@ class UpdateContentUseCase:
         self._uow = uow
         self._publisher = publisher
 
-    async def execute(self, command: UpdateContentCommand) -> int:
+    async def execute(self, command: UpdateContentCommand) -> tuple[Prompt, PromptVersion]:
         """Change content: never edits in place, it creates and activates a new version."""
         async with self._uow:
             prompt = await require_prompt(self._uow.prompts, command.prompt_id)
@@ -25,4 +26,4 @@ class UpdateContentUseCase:
             await self._uow.prompts.save(prompt)
             await self._uow.commit()
         await self._publisher.publish(prompt.pull_events())
-        return version.number
+        return prompt, version

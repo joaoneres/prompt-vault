@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from domain import PromptVersion
+from domain import Prompt
 from port import PromptRepository
 
 from .._helpers import require_prompt
@@ -16,6 +16,5 @@ class ListVersionsUseCase:
     def __init__(self, prompts: PromptRepository) -> None:
         self._prompts = prompts
 
-    async def execute(self, query: ListVersionsQuery) -> tuple[PromptVersion, ...]:
-        prompt = await require_prompt(self._prompts, query.prompt_id)
-        return prompt.versions
+    async def execute(self, query: ListVersionsQuery) -> Prompt:
+        return await require_prompt(self._prompts, query.prompt_id)

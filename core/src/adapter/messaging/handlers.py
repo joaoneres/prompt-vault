@@ -30,7 +30,13 @@ from app.queries import (
 
 from . import subjects
 from .codec import optional_bool, require_int, require_str, require_uuid
-from .serializers import diff_to_dict, prompt_summary_to_dict, prompt_to_dict, version_to_dict
+from .serializers import (
+    diff_response,
+    prompt_detail_response,
+    prompt_response,
+    version_response,
+    versions_response,
+)
 
 Handler = Callable[[dict[str, Any]], Awaitable[Any]]
 
@@ -69,8 +75,9 @@ def build_routes(factories: UseCaseFactories) -> list[Route]:
     """Translate payloads into use case inputs and results into plain data. No business rules."""
 
     async def create_prompt(p: dict[str, Any]) -> Any:
-        command = CreatePromptCommand(name=require_str(p, "name"), content=require_str(p, "content"))
-        return {"prompt_id": str(await factories.create_prompt().execute(command))}
+        content = require_str(p, "content")
+        command = CreatePromptCommand(name=require_str(p, "name"), content=content)
+        return prompt_response(await factories.create_prompt().execute(command), content=content)
 
     async def create_version(p: dict[str, Any]) -> Any:
         command = CreateVersionCommand(
@@ -78,45 +85,45 @@ def build_routes(factories: UseCaseFactories) -> list[Route]:
             content=require_str(p, "content"),
             activate=optional_bool(p, "activate"),
         )
-        return {"version_number": await factories.create_version().execute(command)}
+        prompt, version = await factories.create_version().execute(command)
+        return version_response(prompt, version)
 
     async def update_content(p: dict[str, Any]) -> Any:
         command = UpdateContentCommand(
             prompt_id=require_uuid(p, "prompt_id"), content=require_str(p, "content")
         )
-        return {"version_number": await factories.update_content().execute(command)}
+        prompt, version = await factories.update_content().execute(command)
+        return version_response(prompt, version)
 
     async def activate_version(p: dict[str, Any]) -> Any:
         command = ActivateVersionCommand(
             prompt_id=require_uuid(p, "prompt_id"), version_number=require_int(p, "version_number")
         )
-        await factories.activate_version().execute(command)
+        return prompt_response(await factories.activate_version().execute(command))
 
     async def delete_prompt(p: dict[str, Any]) -> Any:
-        await factories.delete_prompt().execute(DeletePromptCommand(require_uuid(p, "prompt_id")))
+        command = DeletePromptCommand(require_uuid(p, "prompt_id"))
+        return prompt_response(await factories.delete_prompt().execute(command))
 
     async def restore_prompt(p: dict[str, Any]) -> Any:
-        await factories.restore_prompt().execute(RestorePromptCommand(require_uuid(p, "prompt_id")))
+        command = RestorePromptCommand(require_uuid(p, "prompt_id"))
+        return prompt_response(await factories.restore_prompt().execute(command))
 
     async def get_prompt(p: dict[str, Any]) -> Any:
         prompt = await factories.get_prompt().execute(GetPromptQuery(require_uuid(p, "prompt_id")))
-        return prompt_to_dict(prompt)
+        return prompt_detail_response(prompt)
 
     async def list_versions(p: dict[str, Any]) -> Any:
-        prompt_id = require_uuid(p, "prompt_id")
-        versions = await factories.list_versions().execute(ListVersionsQuery(prompt_id))
-        return {
-            "prompt_id": str(prompt_id),
-            "versions": [version_to_dict(version) for version in versions],
-        }
+        prompt = await factories.list_versions().execute(ListVersionsQuery(require_uuid(p, "prompt_id")))
+        return versions_response(prompt)
 
     async def list_active(_: dict[str, Any]) -> Any:
         prompts = await factories.list_active_prompts().execute()
-        return {"prompts": [prompt_summary_to_dict(prompt) for prompt in prompts]}
+        return [prompt_response(prompt) for prompt in prompts]
 
     async def list_deleted(_: dict[str, Any]) -> Any:
         prompts = await factories.list_deleted_prompts().execute()
-        return {"prompts": [prompt_summary_to_dict(prompt) for prompt in prompts]}
+        return [prompt_response(prompt) for prompt in prompts]
 
     async def compare_versions(p: dict[str, Any]) -> Any:
         query = CompareVersionsQuery(
@@ -124,7 +131,8 @@ def build_routes(factories: UseCaseFactories) -> list[Route]:
             from_version=require_int(p, "from_version"),
             to_version=require_int(p, "to_version"),
         )
-        return diff_to_dict(await factories.compare_versions().execute(query))
+        prompt, diff = await factories.compare_versions().execute(query)
+        return diff_response(prompt, diff)
 
     command, query = RouteKind.COMMAND, RouteKind.QUERY
     return [

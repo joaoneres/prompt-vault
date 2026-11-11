@@ -13,12 +13,18 @@ uv run uvicorn main:app --reload
 
 # Add a dependency
 uv add <package>
+
+# Unit tests (no network)
+uv run pytest
+
+# Smoke test (needs NATS, the core and this API running)
+./smoke_test.sh
 ```
 
 
 ## Architecture
 
-This project is a FastAPI-based HTTP API service that communicates asynchronously via [NATS](https://nats.io/) messaging. The entry point is [`main.py`](../main.py). The project is in early scaffolding stage—features are built around FastAPI routers and NATS pub/sub patterns.
+This project is a FastAPI HTTP gateway for the Prompt Vault core. It talks to the core over [NATS](https://nats.io/) request/reply and returns the `data` of the core's `ApiWrapper` envelope as the HTTP body (always 200 on success). The entry point is [`main.py`](../main.py).
 
 ## Project Structure
 
@@ -28,9 +34,10 @@ In this project we use an MVC folder structure:
 ├── main.py              # Application entry point
 ├── controllers/             # FastAPI routers for different API endpoints
 ├── services/                # Business logic
-├── messaging/               # NATS message handlers
-├── models/                  # Pydantic models for request/response bodies
-├── utils/                   # Utility functions and helpers
+├── messaging/               # NATSPublisher: the only module that imports nats-py
+├── models/                  # Request DTOs, response DTOs and ApiWrapper[T]
+├── utils/                   # Exceptions, error handlers, json helpers, logging
+├── tests/                   # Unit tests (pytest, NATS mocked)
 ```
 
 ## Code Style
@@ -52,4 +59,6 @@ In this project we use an MVC folder structure:
 ## Project Conventions
 
 - `pyproject.toml` is the single source of truth for dependencies and metadata—do not use `requirements.txt`
-- NATS subjects should follow a `verb.noun` or `service.action` naming convention (e.g., `prompt.verify`)
+- NATS subjects follow the core's naming (`prompt.create`, `prompt.versions.list`, ...); they live in `services/prompt_service.py`
+- Errors are always `BaseAppException` subclasses (`utils/exceptions.py`), rendered by the handlers in `utils/error_handlers.py`; controllers never catch exceptions
+- The gateway does not reshape the core's `data`; `models/response_models.py` only documents it in Swagger. The repo-root `smoke_test.sh` validates the real responses against those models

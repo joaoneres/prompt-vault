@@ -1,64 +1,76 @@
+"""Domain objects -> the JSON contract served in `data` (mirrors the API response DTOs)."""
+
 from typing import Any
 
-from domain import Prompt, PromptVersion, VersionDiff
+from domain import ChangeType, Prompt, PromptVersion, VersionDiff
 
 
-def version_to_dict(version: PromptVersion, *, is_active: bool | None = None) -> dict[str, Any]:
-    data: dict[str, Any] = {
-        "id": str(version.id),
-        "number": version.number,
-        "content": version.content,
-        "created_at": version.created_at.isoformat(),
-    }
-    if is_active is not None:  # only known when the whole prompt is at hand
-        data["is_active"] = is_active
-    return data
-
-
-def prompt_summary_to_dict(prompt: Prompt) -> dict[str, Any]:
+def prompt_response(prompt: Prompt, *, content: str | None = None) -> dict[str, Any]:
+    """PromptResponse. `content` is only sent by create_prompt."""
     active = prompt.active_version
-    return {
+    data: dict[str, Any] = {
         "id": str(prompt.id),
         "name": prompt.name,
         "status": prompt.status.value,
-        "active_version_number": active.number if active else None,
-        "versions_count": len(prompt.versions),
-        "is_in_use": prompt.is_in_use,
+        "active_version_id": str(active.id) if active else None,
         "created_at": prompt.created_at.isoformat(),
         "updated_at": prompt.updated_at.isoformat(),
-        "deleted_at": prompt.deleted_at.isoformat() if prompt.deleted_at else None,
+    }
+    if content is not None:
+        data["content"] = content
+    return data
+
+
+def version_response(prompt: Prompt, version: PromptVersion) -> dict[str, Any]:
+    """PromptVersionResponse."""
+    return {
+        "id": str(version.id),
+        "prompt_id": str(prompt.id),
+        "version_number": version.number,
+        "content": version.content,
+        "created_at": version.created_at.isoformat(),
+        "is_active": prompt.is_version_active(version.number),
     }
 
 
-def versions_to_list(prompt: Prompt) -> list[dict[str, Any]]:
-    return [
-        version_to_dict(version, is_active=prompt.is_version_active(version.number))
-        for version in prompt.versions
-    ]
+def versions_response(prompt: Prompt) -> list[dict[str, Any]]:
+    return [version_response(prompt, version) for version in prompt.versions]
 
 
-def prompt_to_dict(prompt: Prompt) -> dict[str, Any]:
-    return {**prompt_summary_to_dict(prompt), "versions": versions_to_list(prompt)}
+def prompt_detail_response(prompt: Prompt) -> dict[str, Any]:
+    """PromptDetailResponse."""
+    return {**prompt_response(prompt), "versions": versions_response(prompt)}
 
 
-def diff_to_dict(diff: VersionDiff) -> dict[str, Any]:
+def diff_response(prompt: Prompt, diff: VersionDiff) -> dict[str, Any]:
+    """VersionDiffResponse. A MODIFIED entry becomes a removed line plus an added line."""
+    lines: list[dict[str, Any]] = []
+    for entry in diff.entries:
+        match entry.change_type:
+            case ChangeType.UNCHANGED:
+                lines.append(_line("unchanged", entry.new_text, entry.old_line, entry.new_line))
+            case ChangeType.ADDED:
+                lines.append(_line("added", entry.new_text, None, entry.new_line))
+            case ChangeType.REMOVED:
+                lines.append(_line("removed", entry.old_text, entry.old_line, None))
+            case ChangeType.MODIFIED:
+                lines.append(_line("removed", entry.old_text, entry.old_line, None))
+                lines.append(_line("added", entry.new_text, None, entry.new_line))
     return {
         "prompt_id": str(diff.prompt_id),
-        "from_version": diff.from_version,
-        "to_version": diff.to_version,
-        "algorithm": diff.algorithm,
+        "version_id_before": str(prompt.get_version(diff.from_version).id),
+        "version_id_after": str(prompt.get_version(diff.to_version).id),
+        "version_number_before": diff.from_version,
+        "version_number_after": diff.to_version,
+        "lines": lines,
         "has_changes": diff.has_changes,
-        "added": diff.added_count,
-        "removed": diff.removed_count,
-        "modified": diff.modified_count,
-        "entries": [
-            {
-                "change_type": entry.change_type.value,
-                "old_line": entry.old_line,
-                "new_line": entry.new_line,
-                "old_text": entry.old_text,
-                "new_text": entry.new_text,
-            }
-            for entry in diff.entries
-        ],
+    }
+
+
+def _line(kind: str, content: str | None, before: int | None, after: int | None) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "content": content or "",
+        "line_number_before": before,
+        "line_number_after": after,
     }

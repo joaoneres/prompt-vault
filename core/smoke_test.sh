@@ -167,53 +167,68 @@ section "Commands (request/reply)"
 req prompt.create "{\"name\":\"smoke-$RUN_ID\",\"content\":\"Ola\\nmundo\"}" "$CID"
 expect_eq "prompt.create -> ok" "true" "$(json_get ok)"
 expect_eq "prompt.create -> devolve o correlation id enviado" "$CID" "$(json_get correlation_id)"
-PID="$(json_get data.prompt_id)"
-[[ "$PID" =~ ^[0-9a-f-]{36}$ ]] && pass "prompt.create -> prompt_id é um UUID ($PID)" \
-  || fail "prompt.create -> prompt_id é um UUID" "obtido: $PID"
+PID="$(json_get data.id)"
+[[ "$PID" =~ ^[0-9a-f-]{36}$ ]] && pass "prompt.create -> id é um UUID ($PID)" \
+  || fail "prompt.create -> id é um UUID" "obtido: $PID"
+expect_eq "prompt.create -> status active" "active" "$(json_get data.status)"
+expect_eq "prompt.create -> devolve o content" "$(printf 'Ola\nmundo')" "$(json_get data.content)"
+V1_ID="$(json_get data.active_version_id)"
+[[ "$V1_ID" =~ ^[0-9a-f-]{36}$ ]] && pass "prompt.create -> active_version_id é um UUID" \
+  || fail "prompt.create -> active_version_id é um UUID" "obtido: $V1_ID"
 
 req prompt.version.create "{\"prompt_id\":\"$PID\",\"content\":\"Oi\\nmundo\"}"
 expect_eq "prompt.version.create -> versão 2" "2" "$(json_get data.version_number)"
+expect_eq "prompt.version.create -> prompt_id" "$PID" "$(json_get data.prompt_id)"
+expect_eq "prompt.version.create -> não ativa a nova versão" "false" "$(json_get data.is_active)"
 
 req prompt.content.update "{\"prompt_id\":\"$PID\",\"content\":\"E ai\\nmundo\\nfim\"}"
 expect_eq "prompt.content.update -> versão 3" "3" "$(json_get data.version_number)"
+expect_eq "prompt.content.update -> versão 3 ativa" "true" "$(json_get data.is_active)"
+V3_ID="$(json_get data.id)"
 
 req prompt.get "{\"prompt_id\":\"$PID\"}"
-expect_eq "prompt.get -> 3 versões" "3" "$(json_get data.versions_count)"
-expect_eq "prompt.get -> versão 3 ativa (update ativa automaticamente)" "3" "$(json_get data.active_version_number)"
+expect_eq "prompt.get -> 3 versões" "3" "$(json_get data.versions.#)"
+expect_eq "prompt.get -> active_version_id é o da versão 3" "$V3_ID" "$(json_get data.active_version_id)"
 expect_eq "prompt.get -> status active" "active" "$(json_get data.status)"
 
 req prompt.version.activate "{\"prompt_id\":\"$PID\",\"version_number\":1}"
 expect_eq "prompt.version.activate(1) -> ok" "true" "$(json_get ok)"
+expect_eq "prompt.version.activate(1) -> devolve o prompt com a versão 1 ativa" "$V1_ID" "$(json_get data.active_version_id)"
 req prompt.get "{\"prompt_id\":\"$PID\"}"
-expect_eq "prompt.get -> versão 1 ativa após rollback" "1" "$(json_get data.active_version_number)"
-expect_eq "prompt.get -> histórico preservado (3 versões)" "3" "$(json_get data.versions_count)"
+expect_eq "prompt.get -> versão 1 ativa após rollback" "$V1_ID" "$(json_get data.active_version_id)"
+expect_eq "prompt.get -> histórico preservado (3 versões)" "3" "$(json_get data.versions.#)"
 
 section "Queries (request/reply)"
 
 req prompt.versions.list "{\"prompt_id\":\"$PID\"}"
-expect_eq "prompt.versions.list -> números das versões" "1 2 3" "$(json_get 'data.versions.*.number')"
+expect_eq "prompt.versions.list -> array com 3 versões" "3" "$(json_get data.#)"
+expect_eq "prompt.versions.list -> números das versões" "1 2 3" "$(json_get 'data.*.version_number')"
+expect_eq "prompt.versions.list -> só a versão 1 está ativa" "True False False" "$(json_get 'data.*.is_active')"
 
 req prompt.versions.compare "{\"prompt_id\":\"$PID\",\"from_version\":1,\"to_version\":3}"
 expect_eq "prompt.versions.compare -> has_changes" "true" "$(json_get data.has_changes)"
-expect_eq "prompt.versions.compare -> algoritmo line" "line" "$(json_get data.algorithm)"
-expect_eq "prompt.versions.compare -> 1 modificada" "1" "$(json_get data.modified)"
-expect_eq "prompt.versions.compare -> 1 adicionada" "1" "$(json_get data.added)"
+expect_eq "prompt.versions.compare -> ids das versões" "$V1_ID $V3_ID" "$(json_get data.version_id_before) $(json_get data.version_id_after)"
+expect_eq "prompt.versions.compare -> números das versões" "1 3" "$(json_get data.version_number_before) $(json_get data.version_number_after)"
+expect_eq "prompt.versions.compare -> tipos das linhas (modified vira removed + added)" \
+  "removed added unchanged added" "$(json_get 'data.lines.*.kind')"
 
 req prompt.list.active '{}'
-expect_contains "prompt.list.active -> contém o prompt" "$PID" "$(json_get 'data.prompts.*.id')"
+expect_contains "prompt.list.active -> array com o prompt" "$PID" "$(json_get 'data.*.id')"
 
 section "Soft delete e recuperação"
 
 req prompt.delete "{\"prompt_id\":\"$PID\"}"
 expect_eq "prompt.delete -> ok" "true" "$(json_get ok)"
+expect_eq "prompt.delete -> devolve o prompt deleted" "deleted" "$(json_get data.status)"
 req prompt.list.deleted '{}'
-expect_contains "prompt.list.deleted -> contém o prompt" "$PID" "$(json_get 'data.prompts.*.id')"
+expect_contains "prompt.list.deleted -> array com o prompt" "$PID" "$(json_get 'data.*.id')"
 req prompt.get "{\"prompt_id\":\"$PID\"}"
 expect_eq "prompt.get -> status deleted" "deleted" "$(json_get data.status)"
-expect_eq "prompt.get -> versões preservadas" "3" "$(json_get data.versions_count)"
+expect_eq "prompt.get -> versões preservadas" "3" "$(json_get data.versions.#)"
 
 req prompt.restore "{\"prompt_id\":\"$PID\"}"
 expect_eq "prompt.restore -> ok" "true" "$(json_get ok)"
+expect_eq "prompt.restore -> devolve o prompt active" "active" "$(json_get data.status)"
 req prompt.get "{\"prompt_id\":\"$PID\"}"
 expect_eq "prompt.get -> status active após restore" "active" "$(json_get data.status)"
 
@@ -232,13 +247,13 @@ expect_eq "UUID inválido -> invalid_payload" "invalid_payload" "$(json_get erro
 req prompt.get "{\"prompt_id\":\"$RANDOM_UUID\"}"
 expect_eq "prompt inexistente -> not_found" "not_found" "$(json_get error.code)"
 req prompt.version.activate "{\"prompt_id\":\"$PID\",\"version_number\":99}"
-expect_eq "versão inexistente -> domain_error" "domain_error" "$(json_get error.code)"
+expect_eq "versão inexistente -> version_not_found" "version_not_found" "$(json_get error.code)"
 req prompt.versions.compare "{\"prompt_id\":\"$PID\",\"from_version\":2,\"to_version\":2}"
-expect_eq "comparar a mesma versão -> domain_error" "domain_error" "$(json_get error.code)"
+expect_eq "comparar a mesma versão -> invalid_version_comparison" "invalid_version_comparison" "$(json_get error.code)"
 req prompt.create '{"name":"   ","content":"x"}'
-expect_eq "nome em branco -> domain_error" "domain_error" "$(json_get error.code)"
+expect_eq "nome em branco -> invalid_prompt" "invalid_prompt" "$(json_get error.code)"
 req prompt.restore "{\"prompt_id\":\"$PID\"}"
-expect_eq "restaurar prompt que não está deletado -> domain_error" "domain_error" "$(json_get error.code)"
+expect_eq "restaurar prompt que não está deletado -> prompt_not_deleted" "prompt_not_deleted" "$(json_get error.code)"
 
 # ------------------------------------------------------------------ eventos
 

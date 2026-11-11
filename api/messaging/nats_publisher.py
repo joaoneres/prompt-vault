@@ -25,10 +25,10 @@ from utils.json_utils import decode_json_object, encode_json
 
 
 def _domain_error(message: str) -> BaseAppException:
-    """Pick the specific exception for a core domain error.
+    """Fallback for the generic core code "domain_error": match the message text.
 
-    The core only sends the code "domain_error", so this matches its message text.
-    Anything unrecognised becomes a generic DomainRuleException.
+    The core sends one code per business rule (see _core_error), so this only covers
+    rules it has no dedicated code for. Unrecognised ones become DomainRuleException.
     """
     details = {"reason": message}
     if message.startswith("Version ") and "does not exist" in message:
@@ -48,6 +48,16 @@ def _core_error(code: str, message: str, payload: dict[str, Any]) -> BaseAppExce
             return PromptNotFoundException(payload.get("prompt_id"))
         case "invalid_payload":
             return InvalidRequestException({"reason": message})
+        case "version_not_found":
+            return VersionNotFoundException({"reason": message})
+        case "invalid_version_comparison":
+            return InvalidVersionComparisonException({"reason": message})
+        case "prompt_deleted":
+            return PromptAlreadyDeletedException({"reason": message})
+        case "prompt_not_deleted":
+            return PromptNotDeletedException({"reason": message})
+        case "invalid_prompt":
+            return DomainRuleException({"reason": message})
         case "domain_error":
             return _domain_error(message)
         case "timeout":

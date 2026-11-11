@@ -132,6 +132,23 @@ async def test_domain_error_mapping(nc, message, expected):
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
+        ("version_not_found", VersionNotFoundException),
+        ("invalid_version_comparison", InvalidVersionComparisonException),
+        ("prompt_deleted", PromptAlreadyDeletedException),
+        ("prompt_not_deleted", PromptNotDeletedException),
+        ("invalid_prompt", DomainRuleException),
+    ],
+)
+async def test_dedicated_core_codes_map_without_reading_the_message(nc, code, expected):
+    nc.request.return_value = reply(err(code, "texto qualquer que não importa"))
+    with pytest.raises(expected) as info:
+        await NATSPublisher(nc).request("s", {})
+    assert info.value.details == {"reason": "texto qualquer que não importa"}
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
         ("invalid_payload", InvalidRequestException),
         ("timeout", CoreTimeoutException),
         ("internal_error", CoreResponseException),

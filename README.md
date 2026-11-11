@@ -39,7 +39,7 @@ The API fails at startup if NATS is down. Without the Core running, calls return
 
 ## API
 
-Every success returns **HTTP 200** with the Core's `data` as the body (an object, or an array for listings). Swagger documents the expected DTOs (`PromptResponse`, `PromptVersionResponse`, `PromptDetailResponse`, `VersionDiffResponse`) but does not validate or reshape the response.
+Every success returns **HTTP 200** with the Core's `data` as the body (an object, or an array for listings). Swagger documents the DTOs (`PromptResponse`, `PromptVersionResponse`, `PromptDetailResponse`, `VersionDiffResponse`); the API does not reshape the response, and the global smoke test checks the core really produces them.
 
 | Method | Route | Use case | NATS subject |
 |---|---|---|---|
@@ -90,8 +90,12 @@ api/
 
 ```bash
 cd api  && uv run pytest        # unit tests, NATS mocked, no network
-cd core && ./smoke_test.sh      # needs NATS and the core running
+cd core && ./smoke_test.sh      # core only, via NATS CLI (needs NATS and the core)
+cd api  && ./smoke_test.sh      # api only, via curl (needs NATS, core and api)
+./smoke_test.sh                 # global: HTTP -> api -> NATS -> core, contract and cross-checks
 ```
+
+The global smoke test (needs NATS, core and api running) checks that every HTTP body is valid against the API DTOs and equal to the `data` returned by the core for the same query, that both sides see the same state, that domain events are published, and that core errors reach HTTP with the right status and code.
 
 ## Environment setup
 
