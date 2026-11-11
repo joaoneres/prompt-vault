@@ -16,6 +16,7 @@ from .exceptions import (
     InvalidStateTransitionError,
     InvalidVersionComparisonError,
     PromptDeletedError,
+    PromptNotDeletedError,
     VersionNotFoundError,
 )
 from .status import PromptStatus
@@ -35,6 +36,7 @@ __all__ = [
     "PromptDeactivated",
     "PromptDeleted",
     "PromptDeletedError",
+    "PromptNotDeletedError",
     "PromptReactivated",
     "PromptRestored",
     "PromptStatus",

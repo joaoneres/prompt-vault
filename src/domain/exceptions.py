@@ -32,3 +32,8 @@ class InvalidVersionComparisonError(DomainError):
     def __init__(self, number: int) -> None:
         super().__init__(f"Cannot compare version {number} with itself")
         self.number = number
+
+
+class PromptNotDeletedError(DomainError):
+    def __init__(self) -> None:
+        super().__init__("Cannot restore a prompt that is not deleted")

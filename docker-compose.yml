@@ -1,0 +1,9 @@
+services:
+  nats:
+    image: nats:2
+    container_name: pv-nats
+    command: ["-m", "8222"] # enables the HTTP monitoring endpoint
+    ports:
+      - "4222:4222" # client connections (NATS_URL)
+      - "8222:8222" # monitoring: http://localhost:8222/varz
+    restart: unless-stopped

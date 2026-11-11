@@ -17,6 +17,7 @@ from ..exceptions import (
     InvalidStateTransitionError,
     InvalidVersionComparisonError,
     PromptDeletedError,
+    PromptNotDeletedError,
     VersionNotFoundError,
 )
 from ..status import PromptStatus
@@ -233,10 +234,12 @@ class Prompt:
     # ------------------------------------------------------------------ lifecycle
 
     def deactivate(self) -> None:
+        self._ensure_not_deleted("deactivate")
         now = self._transition_to(PromptStatus.INACTIVE)
         self._record(PromptDeactivated(prompt_id=self._id, occurred_at=now))
 
     def reactivate(self) -> None:
+        self._ensure_not_deleted("reactivate")
         now = self._transition_to(PromptStatus.ACTIVE)
         self._record(PromptReactivated(prompt_id=self._id, occurred_at=now))
 
@@ -250,6 +253,8 @@ class Prompt:
 
     def restore(self) -> None:
         """Undo a soft delete, going back to the status the prompt had before it."""
+        if not self.is_deleted:
+            raise PromptNotDeletedError()
         target = self._status_before_deletion or PromptStatus.INACTIVE
         now = self._transition_to(target)
         self._status_before_deletion = None
