@@ -3,12 +3,13 @@
 Versioned prompt management. Two services that talk over [NATS](https://nats.io/):
 
 ```text
-HTTP client → api (FastAPI) ──NATS request/reply──▶ core (hexagonal, SQLite)
+front (React) → api (FastAPI) ──NATS request/reply──▶ core (hexagonal, SQLite)
 ```
 
 | Folder | Role | Docs |
 |---|---|---|
 | [`core/`](core) | Domain and use cases (create, version, activate, compare, soft delete). Listens on NATS subjects and persists in SQLite. | [`core/CLAUDE.md`](core/CLAUDE.md) |
+| [`front/`](front) | Dashboard to list, search, create and edit prompts (React + Vite + TypeScript + Tailwind + Axios). Talks only to the API. | [`front/README.md`](front/README.md) |
 | [`api/`](api) | HTTP gateway. Validates input, sends one NATS message per use case and returns the Core's `data` as is. | [`api/CLAUDE.md`](api/CLAUDE.md) |
 
 ## Quick start
@@ -24,7 +25,12 @@ cd core && uv sync && uv run src/main.py
 
 # 3. API (terminal 2)
 cd api && uv sync && uv run uvicorn main:app --reload
+
+# 4. Front (terminal 3)
+cd front && npm install && npm run dev
 ```
+
+Front: http://localhost:5173 (Vite forwards `/api` to the API on port 8000, which has no CORS).
 
 Swagger UI: http://localhost:8000/docs · ReDoc: http://localhost:8000/redoc
 
