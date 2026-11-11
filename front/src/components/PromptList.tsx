@@ -8,11 +8,10 @@ interface Props {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
-  onTimeline: (prompt: PromptItem) => void;
   onDetails: (prompt: PromptItem) => void;
 }
 
-export default function PromptList({ prompts, loading, error, onRetry, onTimeline, onDetails }: Props) {
+export default function PromptList({ prompts, loading, error, onRetry, onDetails }: Props) {
   const [query, setQuery] = useState("");
 
   const visible = useMemo(() => {
@@ -65,7 +64,7 @@ export default function PromptList({ prompts, loading, error, onRetry, onTimelin
         <ul className="grid grid-cols-1 gap-4">
           {visible.map((prompt) => (
             <li key={prompt.id}>
-              <PromptCard prompt={prompt} onTimeline={onTimeline} onDetails={onDetails} />
+              <PromptCard prompt={prompt} onDetails={onDetails} />
             </li>
           ))}
         </ul>

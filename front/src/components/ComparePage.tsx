@@ -9,6 +9,9 @@ import VersionSelector from "./VersionSelector";
 interface Props {
   /** Prompt taken from the route (#/compare/{id}); the page never keeps its own copy of it. */
   promptId?: string;
+  /** Versions to start with (#/compare/{id}?from=..&to=..), used when they exist and differ. */
+  initialFrom?: number;
+  initialTo?: number;
   onSelectPrompt: (promptId: string) => void;
   onError: (message: string) => void;
 }
@@ -21,7 +24,7 @@ type DiffState =
 
 const card = "rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur sm:p-5 dark:border-slate-800 dark:bg-slate-900/80";
 
-export default function ComparePage({ promptId, onSelectPrompt, onError }: Props) {
+export default function ComparePage({ promptId, initialFrom, initialTo, onSelectPrompt, onError }: Props) {
   const [prompts, setPrompts] = useState<PromptResponse[]>([]);
   const [listError, setListError] = useState<string | null>(null);
   const [detail, setDetail] = useState<PromptDetailResponse | null>(null);
@@ -60,7 +63,16 @@ export default function ComparePage({ promptId, onSelectPrompt, onError }: Props
         if (!current) return;
         const numbers = data.versions.map((version) => version.version_number).sort((a, b) => a - b);
         setDetail(data);
-        if (numbers.length >= 2) {
+        const wanted =
+          initialFrom !== undefined &&
+          initialTo !== undefined &&
+          initialFrom !== initialTo &&
+          numbers.includes(initialFrom) &&
+          numbers.includes(initialTo);
+        if (wanted) {
+          setBefore(initialFrom);
+          setAfter(initialTo);
+        } else if (numbers.length >= 2) {
           setBefore(numbers[numbers.length - 2]);
           setAfter(numbers[numbers.length - 1]);
         }
@@ -73,7 +85,7 @@ export default function ComparePage({ promptId, onSelectPrompt, onError }: Props
     return () => {
       current = false;
     };
-  }, [promptId, retry]);
+  }, [promptId, initialFrom, initialTo, retry]);
 
   // 3. The diff itself, always from the API. A newer selection discards an older answer.
   useEffect(() => {

@@ -3,14 +3,13 @@ import { activeVersion, type PromptItem } from "../types";
 
 interface Props {
   prompt: PromptItem;
-  onTimeline: (prompt: PromptItem) => void;
   onDetails: (prompt: PromptItem) => void;
 }
 
 const iconButton =
   "inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-indigo-50 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300";
 
-export default function PromptCard({ prompt, onTimeline, onDetails }: Props) {
+export default function PromptCard({ prompt, onDetails }: Props) {
   const active = activeVersion(prompt);
 
   return (
@@ -33,11 +32,7 @@ export default function PromptCard({ prompt, onTimeline, onDetails }: Props) {
 
         <div className="flex shrink-0 items-center gap-0.5">
           <a
-            href={`/prompts/${prompt.id}/timeline`}
-            onClick={(event) => {
-              event.preventDefault();
-              onTimeline(prompt);
-            }}
+            href={`#/timeline/${prompt.id}`}
             aria-label={`Linha do tempo de ${prompt.name}`}
             title="Linha do tempo"
             className={iconButton}

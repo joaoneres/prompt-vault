@@ -8,16 +8,34 @@ import FloatingAddButton from "./components/FloatingAddButton";
 import GeometricBackground from "./components/GeometricBackground";
 import PromptDetailModal from "./components/PromptDetailModal";
 import PromptList from "./components/PromptList";
+import TimelinePage from "./components/TimelinePage";
 import ThemeToggle from "./components/ThemeToggle";
 import Toaster, { useToasts } from "./components/Toaster";
 import type { PromptItem, PromptResponse } from "./types";
 
-type Route = { name: "list" } | { name: "compare"; promptId?: string };
+type Route =
+  | { name: "list" }
+  | { name: "compare"; promptId?: string; from?: number; to?: number }
+  | { name: "timeline"; promptId: string };
 
-/** Tiny hash router: "#/compare" and "#/compare/{promptId}". Everything else is the list. */
+const ID = "([0-9a-fA-F-]{36})";
+
+/**
+ * Tiny hash router: "#/compare", "#/compare/{id}", "#/compare/{id}?from=1&to=3" and
+ * "#/timeline/{id}". Everything else is the list.
+ */
 function parseRoute(): Route {
-  const match = location.hash.match(/^#\/compare(?:\/([0-9a-fA-F-]{36}))?\/?$/);
-  return match ? { name: "compare", promptId: match[1] } : { name: "list" };
+  const compare = location.hash.match(new RegExp(`^#/compare(?:/${ID})?/?(?:\\?from=(\\d+)&to=(\\d+))?$`));
+  if (compare) {
+    return {
+      name: "compare",
+      promptId: compare[1],
+      from: compare[2] ? Number(compare[2]) : undefined,
+      to: compare[3] ? Number(compare[3]) : undefined,
+    };
+  }
+  const timeline = location.hash.match(new RegExp(`^#/timeline/${ID}/?$`));
+  return timeline ? { name: "timeline", promptId: timeline[1] } : { name: "list" };
 }
 
 function useRoute(): Route {
@@ -57,6 +75,9 @@ export default function App() {
   const { toasts, dismiss, notify } = useToasts();
   const route = useRoute();
   const comparing = route.name === "compare";
+  const timeline = route.name === "timeline";
+  const subpage = comparing || timeline;
+  const timelineName = route.name === "timeline" ? prompts.find((prompt) => prompt.id === route.promptId)?.name : undefined;
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -98,15 +119,19 @@ export default function App() {
     <div className="relative min-h-screen">
       <GeometricBackground />
 
-      <header className={`mx-auto flex w-full items-center justify-between gap-3 px-4 pb-6 pt-8 sm:pt-12 ${comparing ? "max-w-5xl" : "max-w-2xl"}`}>
+      <header className={`mx-auto flex w-full items-center justify-between gap-3 px-4 pb-6 pt-8 sm:pt-12 ${comparing ? "max-w-5xl" : timeline ? "max-w-3xl" : "max-w-2xl"}`}>
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{comparing ? "Comparar versões" : "Prompt Vault"}</h1>
+          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{comparing ? "Comparar versões" : timeline ? "Linha do tempo" : "Prompt Vault"}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {comparing ? "Veja o que mudou entre duas versões de um prompt." : "Seus prompts e versões em um só lugar."}
+            {comparing
+              ? "Veja o que mudou entre duas versões de um prompt."
+              : timeline
+                ? (timelineName ?? "Histórico de versões do prompt")
+                : "Seus prompts e versões em um só lugar."}
           </p>
         </div>
         <nav aria-label="Principal" className="flex shrink-0 items-center gap-2">
-          {comparing ? (
+          {subpage ? (
             <a href="#/" className={navLink}>
               <ArrowLeft className="size-4" aria-hidden />
               <span className="hidden sm:inline">Prompts</span>
@@ -123,10 +148,16 @@ export default function App() {
         </nav>
       </header>
 
-      {comparing ? (
+      {route.name === "timeline" ? (
+        <main className="mx-auto w-full max-w-3xl px-4 pb-16">
+          <TimelinePage key={route.promptId} promptId={route.promptId} onNotify={notify} />
+        </main>
+      ) : route.name === "compare" ? (
         <main className="mx-auto w-full max-w-5xl px-4 pb-16">
           <ComparePage
             promptId={route.promptId}
+            initialFrom={route.from}
+            initialTo={route.to}
             onSelectPrompt={(id) => {
               location.hash = `#/compare/${id}`;
             }}
@@ -141,7 +172,6 @@ export default function App() {
               loading={loading}
               error={error}
               onRetry={() => void refresh()}
-              onTimeline={() => notify("info", "A linha do tempo estará disponível em breve.")}
               onDetails={(prompt) => setDetailId(prompt.id)}
             />
           </main>

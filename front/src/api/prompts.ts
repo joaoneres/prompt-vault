@@ -37,3 +37,7 @@ export const compareVersions = async (
       to_version: toVersion,
     })
   ).data;
+
+/** GET /prompts/{prompt_id}/versions: every version of the prompt, with its content. */
+export const listVersions = async (promptId: string): Promise<PromptVersionResponse[]> =>
+  (await http.get<PromptVersionResponse[]>(`/prompts/${promptId}/versions`)).data;

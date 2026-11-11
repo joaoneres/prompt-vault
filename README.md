@@ -9,7 +9,7 @@ front (React) → api (FastAPI) ──NATS request/reply──▶ core (hexagona
 | Folder | Role | Docs |
 |---|---|---|
 | [`core/`](core) | Domain and use cases (create, version, activate, compare, soft delete). Listens on NATS subjects and persists in SQLite. | [`core/CLAUDE.md`](core/CLAUDE.md) |
-| [`front/`](front) | Dashboard to list, search, create, edit and compare versions of prompts (React + Vite + TypeScript + Tailwind + Axios). Talks only to the API. | [`front/README.md`](front/README.md) |
+| [`front/`](front) | Dashboard to list, search, create, edit, compare and browse the version history of prompts (React + Vite + TypeScript + Tailwind + Axios). Talks only to the API. | [`front/README.md`](front/README.md) |
 | [`api/`](api) | HTTP gateway. Validates input, sends one NATS message per use case and returns the Core's `data` as is. | [`api/CLAUDE.md`](api/CLAUDE.md) |
 
 ## Quick start
