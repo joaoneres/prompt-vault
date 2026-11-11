@@ -1,11 +1,14 @@
-import { Check, ChevronDown, Copy, GitCompareArrows } from "lucide-react";
+import { Check, ChevronDown, Copy, GitCompareArrows, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import type { PromptVersionResponse } from "../types";
+import ConfirmModal from "./ConfirmModal";
 
 interface Props {
   promptId: string;
   /** Newest first. */
   versions: PromptVersionResponse[];
+  /** Makes the version the active one. Handles its own errors. */
+  onActivate: (version: PromptVersionResponse) => Promise<void>;
   onNotify: (kind: "success" | "error", message: string) => void;
 }
 
@@ -39,9 +42,10 @@ function timeAgo(iso: string): string {
 const quickLink =
   "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus-visible:outline-2 focus-visible:outline-indigo-500 dark:border-slate-700 dark:text-slate-300 dark:hover:border-indigo-700 dark:hover:bg-slate-800 dark:hover:text-indigo-300";
 
-export default function VersionTimeline({ promptId, versions, onNotify }: Props) {
+export default function VersionTimeline({ promptId, versions, onActivate, onNotify }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [pending, setPending] = useState<PromptVersionResponse | null>(null);
 
   const active = versions.find((version) => version.is_active);
   const numbers = versions.map((version) => version.version_number);
@@ -60,6 +64,7 @@ export default function VersionTimeline({ promptId, versions, onNotify }: Props)
   };
 
   return (
+    <>
     <ol className="relative">
       {versions.map((version, index) => {
         const isOpen = openId === version.id;
@@ -149,7 +154,7 @@ export default function VersionTimeline({ promptId, versions, onNotify }: Props)
                 </div>
               )}
 
-              {(canComparePrevious || canCompareActive) && (
+              {(canComparePrevious || canCompareActive || !version.is_active) && (
                 <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-2.5 dark:border-slate-800/70">
                   {canComparePrevious && (
                     <a href={compareHref(previous, version.version_number)} className={quickLink}>
@@ -163,6 +168,17 @@ export default function VersionTimeline({ promptId, versions, onNotify }: Props)
                       Comparar com a ativa (v{active.version_number})
                     </a>
                   )}
+                  {!version.is_active && (
+                    <button
+                      type="button"
+                      onClick={() => setPending(version)}
+                      aria-label={`Ativar a versão ${version.version_number}`}
+                      className={`${quickLink} sm:ml-auto`}
+                    >
+                      <RotateCcw className="size-3.5" aria-hidden />
+                      Ativar esta versão
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -170,5 +186,18 @@ export default function VersionTimeline({ promptId, versions, onNotify }: Props)
         );
       })}
     </ol>
+    {pending && (
+      <ConfirmModal
+        title={`Ativar a v${pending.version_number}?`}
+        message={`A v${pending.version_number} passará a ser a versão em uso do prompt. O histórico é preservado e você pode ativar outra versão depois.`}
+        confirmLabel="Ativar versão"
+        onCancel={() => setPending(null)}
+        onConfirm={async () => {
+          await onActivate(pending);
+          setPending(null);
+        }}
+      />
+    )}
+    </>
   );
 }

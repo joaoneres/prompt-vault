@@ -41,3 +41,23 @@ export const compareVersions = async (
 /** GET /prompts/{prompt_id}/versions: every version of the prompt, with its content. */
 export const listVersions = async (promptId: string): Promise<PromptVersionResponse[]> =>
   (await http.get<PromptVersionResponse[]>(`/prompts/${promptId}/versions`)).data;
+
+/** POST /prompts/{prompt_id}/versions: adds a version WITHOUT activating it. */
+export const addVersion = async (promptId: string, content: string): Promise<PromptVersionResponse> =>
+  (await http.post<PromptVersionResponse>(`/prompts/${promptId}/versions`, { content })).data;
+
+/** POST /prompts/{prompt_id}/activate: makes that version the one in use (rollback or promote). */
+export const activateVersion = async (promptId: string, versionNumber: number): Promise<PromptResponse> =>
+  (await http.post<PromptResponse>(`/prompts/${promptId}/activate`, { version_number: versionNumber })).data;
+
+/** DELETE /prompts/{prompt_id}: soft delete, versions are kept. */
+export const deletePrompt = async (promptId: string): Promise<PromptResponse> =>
+  (await http.delete<PromptResponse>(`/prompts/${promptId}`)).data;
+
+/** GET /prompts/deleted */
+export const listDeletedPrompts = async (): Promise<PromptResponse[]> =>
+  (await http.get<PromptResponse[]>("/prompts/deleted")).data;
+
+/** POST /prompts/{prompt_id}/recover */
+export const recoverPrompt = async (promptId: string): Promise<PromptResponse> =>
+  (await http.post<PromptResponse>(`/prompts/${promptId}/recover`)).data;

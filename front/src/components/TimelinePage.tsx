@@ -1,12 +1,14 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "../api/client";
-import { listVersions } from "../api/prompts";
+import { activateVersion, listVersions } from "../api/prompts";
 import type { PromptVersionResponse } from "../types";
 import VersionTimeline from "./VersionTimeline";
 
 interface Props {
   promptId: string;
+  /** Called after the prompt changed (version activated) so the main list can refresh it. */
+  onChanged: (promptId: string) => Promise<void>;
   onNotify: (kind: "success" | "error", message: string) => void;
 }
 
@@ -15,7 +17,9 @@ type State =
   | { status: "error"; message: string }
   | { status: "ready"; versions: PromptVersionResponse[] };
 
-export default function TimelinePage({ promptId, onNotify }: Props) {
+const newestFirst = (versions: PromptVersionResponse[]) => [...versions].sort((a, b) => b.version_number - a.version_number);
+
+export default function TimelinePage({ promptId, onChanged, onNotify }: Props) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [retry, setRetry] = useState(0);
   const notifyRef = useRef(onNotify);
@@ -28,7 +32,7 @@ export default function TimelinePage({ promptId, onNotify }: Props) {
       .then((versions) => {
         if (!current) return;
         // Newest first, like a commit history.
-        setState({ status: "ready", versions: [...versions].sort((a, b) => b.version_number - a.version_number) });
+        setState({ status: "ready", versions: newestFirst(versions) });
       })
       .catch((error) => {
         if (!current) return;
@@ -39,6 +43,18 @@ export default function TimelinePage({ promptId, onNotify }: Props) {
       current = false;
     };
   }, [promptId, retry]);
+
+  /** Activates a version, then reloads the timeline in place (no skeleton) and the main list. */
+  const activate = async (version: PromptVersionResponse) => {
+    try {
+      await activateVersion(promptId, version.version_number);
+      setState({ status: "ready", versions: newestFirst(await listVersions(promptId)) });
+      await onChanged(promptId).catch(() => undefined);
+      onNotify("success", `v${version.version_number} agora é a versão ativa.`);
+    } catch (error) {
+      onNotify("error", errorMessage(error));
+    }
+  };
 
   return (
     <section aria-live="polite" aria-busy={state.status === "loading"}>
@@ -78,7 +94,7 @@ export default function TimelinePage({ promptId, onNotify }: Props) {
             <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
               {state.versions.length} {state.versions.length === 1 ? "versão" : "versões"} · da mais recente para a mais antiga
             </p>
-            <VersionTimeline promptId={promptId} versions={state.versions} onNotify={onNotify} />
+            <VersionTimeline promptId={promptId} versions={state.versions} onActivate={activate} onNotify={onNotify} />
           </>
         ))}
     </section>

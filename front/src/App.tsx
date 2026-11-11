@@ -1,7 +1,7 @@
-import { ArrowLeft, GitCompareArrows } from "lucide-react";
+import { ArrowLeft, GitCompareArrows, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage } from "./api/client";
-import { getPrompt, listActivePrompts } from "./api/prompts";
+import { deletePrompt, getPrompt, listActivePrompts } from "./api/prompts";
 import ComparePage from "./components/ComparePage";
 import CreatePromptModal from "./components/CreatePromptModal";
 import FloatingAddButton from "./components/FloatingAddButton";
@@ -9,6 +9,7 @@ import GeometricBackground from "./components/GeometricBackground";
 import PromptDetailModal from "./components/PromptDetailModal";
 import PromptList from "./components/PromptList";
 import TimelinePage from "./components/TimelinePage";
+import TrashPage from "./components/TrashPage";
 import ThemeToggle from "./components/ThemeToggle";
 import Toaster, { useToasts } from "./components/Toaster";
 import type { PromptItem, PromptResponse } from "./types";
@@ -16,13 +17,14 @@ import type { PromptItem, PromptResponse } from "./types";
 type Route =
   | { name: "list" }
   | { name: "compare"; promptId?: string; from?: number; to?: number }
-  | { name: "timeline"; promptId: string };
+  | { name: "timeline"; promptId: string }
+  | { name: "trash" };
 
 const ID = "([0-9a-fA-F-]{36})";
 
 /**
  * Tiny hash router: "#/compare", "#/compare/{id}", "#/compare/{id}?from=1&to=3" and
- * "#/timeline/{id}". Everything else is the list.
+ * "#/timeline/{id}" and "#/trash". Everything else is the list.
  */
 function parseRoute(): Route {
   const compare = location.hash.match(new RegExp(`^#/compare(?:/${ID})?/?(?:\\?from=(\\d+)&to=(\\d+))?$`));
@@ -35,7 +37,8 @@ function parseRoute(): Route {
     };
   }
   const timeline = location.hash.match(new RegExp(`^#/timeline/${ID}/?$`));
-  return timeline ? { name: "timeline", promptId: timeline[1] } : { name: "list" };
+  if (timeline) return { name: "timeline", promptId: timeline[1] };
+  return /^#\/trash\/?$/.test(location.hash) ? { name: "trash" } : { name: "list" };
 }
 
 function useRoute(): Route {
@@ -76,7 +79,8 @@ export default function App() {
   const route = useRoute();
   const comparing = route.name === "compare";
   const timeline = route.name === "timeline";
-  const subpage = comparing || timeline;
+  const trash = route.name === "trash";
+  const subpage = comparing || timeline || trash;
   const timelineName = route.name === "timeline" ? prompts.find((prompt) => prompt.id === route.promptId)?.name : undefined;
 
   const refresh = useCallback(async () => {
@@ -102,6 +106,20 @@ export default function App() {
     setPrompts((all) => [detail, ...all.filter((prompt) => prompt.id !== promptId)]);
   }, []);
 
+  const deleteOne = useCallback(
+    async (promptId: string) => {
+      try {
+        const deleted = await deletePrompt(promptId);
+        setPrompts((all) => all.filter((prompt) => prompt.id !== promptId));
+        setDetailId(null);
+        notify("success", `Prompt "${deleted.name}" movido para a lixeira.`);
+      } catch (err) {
+        notify("error", errorMessage(err));
+      }
+    },
+    [notify],
+  );
+
   const onCreated = async (created: PromptResponse) => {
     setCreating(false);
     try {
@@ -121,13 +139,15 @@ export default function App() {
 
       <header className={`mx-auto flex w-full items-center justify-between gap-3 px-4 pb-6 pt-8 sm:pt-12 ${comparing ? "max-w-5xl" : timeline ? "max-w-3xl" : "max-w-2xl"}`}>
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{comparing ? "Comparar versões" : timeline ? "Linha do tempo" : "Prompt Vault"}</h1>
+          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{comparing ? "Comparar versões" : timeline ? "Linha do tempo" : trash ? "Lixeira" : "Prompt Vault"}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {comparing
               ? "Veja o que mudou entre duas versões de um prompt."
               : timeline
                 ? (timelineName ?? "Histórico de versões do prompt")
-                : "Seus prompts e versões em um só lugar."}
+                : trash
+                  ? "Prompts excluídos podem ser recuperados."
+                  : "Seus prompts e versões em um só lugar."}
           </p>
         </div>
         <nav aria-label="Principal" className="flex shrink-0 items-center gap-2">
@@ -138,11 +158,18 @@ export default function App() {
               <span className="sr-only sm:hidden">Voltar para os prompts</span>
             </a>
           ) : (
-            <a href="#/compare" className={navLink} title="Comparar versões">
-              <GitCompareArrows className="size-4" aria-hidden />
-              <span className="hidden sm:inline">Comparar</span>
-              <span className="sr-only sm:hidden">Comparar versões</span>
-            </a>
+            <>
+              <a href="#/trash" className={navLink} title="Lixeira">
+                <Trash2 className="size-4" aria-hidden />
+                <span className="hidden sm:inline">Lixeira</span>
+                <span className="sr-only sm:hidden">Lixeira</span>
+              </a>
+              <a href="#/compare" className={navLink} title="Comparar versões">
+                <GitCompareArrows className="size-4" aria-hidden />
+                <span className="hidden sm:inline">Comparar</span>
+                <span className="sr-only sm:hidden">Comparar versões</span>
+              </a>
+            </>
           )}
           <ThemeToggle />
         </nav>
@@ -150,7 +177,11 @@ export default function App() {
 
       {route.name === "timeline" ? (
         <main className="mx-auto w-full max-w-3xl px-4 pb-16">
-          <TimelinePage key={route.promptId} promptId={route.promptId} onNotify={notify} />
+          <TimelinePage key={route.promptId} promptId={route.promptId} onChanged={reloadOne} onNotify={notify} />
+        </main>
+      ) : route.name === "trash" ? (
+        <main className="mx-auto w-full max-w-2xl px-4 pb-16">
+          <TrashPage onRecovered={reloadOne} onNotify={notify} />
         </main>
       ) : route.name === "compare" ? (
         <main className="mx-auto w-full max-w-5xl px-4 pb-16">
@@ -193,6 +224,7 @@ export default function App() {
           prompt={detail}
           onClose={() => setDetailId(null)}
           onSaved={reloadOne}
+          onDelete={deleteOne}
           onNotify={notify}
         />
       )}
