@@ -1,6 +1,6 @@
 # Prompt Vault: front
 
-Dashboard to browse, search, create and edit prompts. React + Vite + TypeScript + Tailwind CSS + Axios.
+Dashboard to manage prompts and their versions: search, create, edit, delete/recover, version timeline and version comparison. React + Vite + TypeScript + Tailwind CSS + Axios.
 All data comes from the API gateway (`../api`); nothing is stored by the front except the theme preference.
 
 ## Run
@@ -8,6 +8,8 @@ All data comes from the API gateway (`../api`); nothing is stored by the front e
 ```bash
 npm install
 npm run dev        # http://localhost:5173
+npm run build      # type-check (tsc) and production build into dist/
+npm run preview    # serve the production build (still needs the API reachable at VITE_API_BASE_URL)
 ```
 
 Needs NATS, the core and the API running (see the root README). In dev, Vite forwards `/api/*` to

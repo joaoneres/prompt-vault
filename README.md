@@ -1,6 +1,6 @@
 # Prompt Vault
 
-Versioned prompt management. Two services that talk over [NATS](https://nats.io/):
+Versioned prompt management, in three projects: a React front, an HTTP API and a core that the API reaches over [NATS](https://nats.io/):
 
 ```text
 front (React) → api (FastAPI) ──NATS request/reply──▶ core (hexagonal, SQLite)
@@ -8,13 +8,13 @@ front (React) → api (FastAPI) ──NATS request/reply──▶ core (hexagona
 
 | Folder | Role | Docs |
 |---|---|---|
-| [`core/`](core) | Domain and use cases (create, version, activate, compare, soft delete). Listens on NATS subjects and persists in SQLite. | [`core/CLAUDE.md`](core/CLAUDE.md) |
+| [`core/`](core) | Domain and use cases (create, version, activate, compare, soft delete). Listens on NATS subjects and persists in SQLite. | [`core/README.md`](core/README.md) |
 | [`front/`](front) | Dashboard to list, search, create, edit, delete/recover, compare and browse the version history of prompts, activating any version (React + Vite + TypeScript + Tailwind + Axios). Talks only to the API. | [`front/README.md`](front/README.md) |
 | [`api/`](api) | HTTP gateway. Validates input, sends one NATS message per use case and returns the Core's `data` as is. | [`api/CLAUDE.md`](api/CLAUDE.md) |
 
 ## Quick start
 
-Requirements: Docker, `uv` and Python 3.13 (see [Environment setup](#environment-setup)).
+Requirements: Docker, `uv`, Python 3.13 and Node.js 22 (see [Environment setup](#environment-setup)).
 
 ```bash
 # 1. NATS
@@ -100,6 +100,10 @@ cd core && ./smoke_test.sh      # core only, via NATS CLI (needs NATS and the co
 cd api  && ./smoke_test.sh      # api only, via curl (needs NATS, core and api)
 ./smoke_test.sh                 # global: HTTP -> api -> NATS -> core, contract and cross-checks
 ```
+
+The global smoke test uses the API's virtualenv, so run `cd api && uv sync` first.
+
+The front has no automated tests yet: `cd front && npm run build` type-checks and builds it.
 
 The global smoke test (needs NATS, core and api running) checks that every HTTP body is valid against the API DTOs and equal to the `data` returned by the core for the same query, that both sides see the same state, that domain events are published, and that core errors reach HTTP with the right status and code.
 

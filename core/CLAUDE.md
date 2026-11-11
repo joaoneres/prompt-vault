@@ -50,13 +50,6 @@ src/
 
 ## Code style
 
-```python
-# Good snippet
-```
-```python
-# Bad snippet
-```
-
 ### Design patterns
 
 - Strategy Pattern, implemented with Factories and Decorators
@@ -69,10 +62,11 @@ src/
 
 - Never commit files containing PII
 - Never commit files containing secrets
-- Never modify the /config layer
 - Never delete failing unit tests
 
 ## Messaging contract
+
+Subjects, payloads, events and configuration are listed in [`README.md`](README.md).
 
 Replies are `{"ok": true, "correlation_id", "data"}` or `{"ok": false, "correlation_id", "error": {"code", "message"}, "subject"}`.
 `data` mirrors the API response DTOs (see `adapter/messaging/serializers.py`; the API's `models/response_models.py` is the reference):
